@@ -1,0 +1,24 @@
+# Location: menu-standards-app/.gitattributes
+#
+# Line endings. Windows ends each line of text with CRLF, while macOS, Linux,
+# and Vercel's build servers use LF. Storing and checking out every text file
+# with LF keeps the project identical on every machine and removes Git's
+# line-ending warnings on Windows.
+* text=auto eol=lf
+
+# Windows batch scripts only run correctly with Windows line endings.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binary files are never converted. Git usually detects these on its own;
+# listing them removes any guesswork, which matters most for PDF menus.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary

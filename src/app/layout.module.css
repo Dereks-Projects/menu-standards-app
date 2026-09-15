@@ -1,0 +1,47 @@
+/*
+ * Location: menu-standards-app/src/app/layout.module.css
+ *
+ * Page frame for the root layout: keeps the footer at the bottom of short
+ * pages and styles the "Skip to main content" link.
+ */
+
+/* Stacks header, main content, and footer. The main area grows to fill
+   the screen, so the footer sits at the bottom of short pages. */
+.body {
+  display: flex;
+  flex-direction: column;
+}
+
+.main {
+  flex: 1 0 auto;
+}
+
+/* The skip link receives focus from its link, not from Tab, so no focus
+   ring is drawn around the whole content area. */
+.main:focus {
+  outline: none;
+}
+
+/* Hidden above the top of the screen until a keyboard user presses Tab. */
+.skipLink {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 200;
+  padding: var(--space-2) var(--space-4);
+  font-weight: var(--weight-medium);
+  color: var(--color-on-ink);
+  text-decoration: none;
+  background-color: var(--color-ink);
+  border-radius: var(--radius-sm);
+  transform: translateY(-200%);
+  transition: transform var(--transition-fast);
+}
+
+.skipLink:hover {
+  color: var(--color-on-ink);
+}
+
+.skipLink:focus {
+  transform: translateY(0);
+}

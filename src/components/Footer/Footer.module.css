@@ -1,0 +1,88 @@
+/*
+ * Location: menu-standards-app/src/components/Footer/Footer.module.css
+ *
+ * Styles for the site footer. Colors, sizes, and spacing come from the
+ * design tokens in src/app/globals.css. Columns stack on phones and sit
+ * side by side on desktop.
+ */
+
+.footer {
+  background-color: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+}
+
+.inner {
+  display: grid;
+  gap: var(--space-6);
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding: var(--space-7) var(--space-4) var(--space-6);
+}
+
+.brandName {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.brandName:hover {
+  color: var(--color-text);
+}
+
+.brandDescription {
+  max-width: 36ch;
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-muted);
+}
+
+.columnTitle {
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.link {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.link:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.bottom {
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding: var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Desktop */
+
+@media (min-width: 769px) {
+  .inner {
+    grid-template-columns: 2fr 1fr 1fr;
+    padding-inline: var(--space-5);
+  }
+
+  .bottom {
+    padding-inline: var(--space-5);
+  }
+}

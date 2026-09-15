@@ -1,0 +1,202 @@
+/*
+ * Location: menu-standards-app/src/components/Header/Header.module.css
+ *
+ * Styles for the site header. Colors, sizes, and spacing come from the
+ * design tokens in src/app/globals.css.
+ */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Centers the header content and anchors the dropdown panels. */
+.inner {
+  position: relative;
+  max-width: var(--content-max);
+  margin-inline: auto;
+}
+
+/* Three columns: left button, centered name, right button. The side
+   columns match the 44px button size so the name stays centered. */
+.row {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+}
+
+.title {
+  justify-self: center;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+}
+
+.title:hover {
+  color: var(--color-text);
+}
+
+/* Menu buttons. 44px meets the recommended touch target size. */
+.iconButton {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: var(--color-text);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.iconButton:hover {
+  color: var(--color-accent);
+  background-color: var(--color-surface-hover);
+}
+
+.iconButton[aria-expanded="true"] {
+  color: var(--color-accent);
+}
+
+.spacer {
+  width: 44px;
+  height: 44px;
+}
+
+.chevron {
+  transition: transform var(--transition-fast);
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+/* Dropdown panels */
+
+.panel {
+  position: absolute;
+  top: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: min(300px, calc(100vw - 2 * var(--space-4)));
+  max-height: calc(100dvh - 80px);
+  overflow-y: auto;
+  padding: var(--space-3);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top: 2px solid var(--color-accent);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+/* The panel's display rule above would otherwise override the hidden
+   attribute, so closed panels are hidden explicitly. */
+.panel[hidden] {
+  display: none;
+}
+
+.panelLeft {
+  left: var(--space-4);
+}
+
+.panelRight {
+  right: var(--space-4);
+}
+
+.panelLabel {
+  padding: var(--space-1) var(--space-3) var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0;
+  list-style: none;
+}
+
+.panelLink {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.panelLink:hover {
+  color: var(--color-text);
+  background-color: var(--color-surface-hover);
+}
+
+.portfolioName {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.portfolioDescription {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.companyLink {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.menuLink {
+  font-weight: var(--weight-medium);
+}
+
+/* The current page is marked in the accent color. */
+.menuLink[aria-current="page"],
+.menuLink[aria-current="page"]:hover {
+  font-weight: var(--weight-semibold);
+  color: var(--color-accent);
+}
+
+.divider {
+  height: 1px;
+  margin: var(--space-2) var(--space-3);
+  background-color: var(--color-border);
+  border: 0;
+}
+
+/* Desktop */
+
+@media (min-width: 769px) {
+  .row {
+    padding: var(--space-3) var(--space-5);
+  }
+
+  .title {
+    font-size: var(--text-lg);
+  }
+
+  .panelLeft {
+    left: var(--space-5);
+  }
+
+  .panelRight {
+    right: var(--space-5);
+  }
+}

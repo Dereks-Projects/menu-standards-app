@@ -1,0 +1,221 @@
+/*
+ * Location: menu-standards-app/src/app/globals.css
+ *
+ * Global styles for Menu Standards: design tokens and a light base reset.
+ * Every component styles itself with a CSS Module and reads these tokens,
+ * so a color or size changes in one place.
+ *
+ * Palette: light neutral surfaces, near-black text and buttons, and a single
+ * maroon accent used sparingly. Contrast ratios were measured against WCAG
+ * 2.2 AA (4.5 to 1 for text, 3 to 1 for control borders and focus rings).
+ *
+ * Breakpoint: layouts are mobile first, and desktop styles start at 769px.
+ * CSS variables cannot be used inside media queries, so each module writes
+ * the value directly: @media (min-width: 769px).
+ */
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --color-page: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f5f5f5;
+
+  /* Borders. The light border is decorative (cards, dividers). Form fields
+     use the strong border, which meets the 3 to 1 minimum on white. */
+  --color-border: #e5e5e5;
+  --color-border-strong: #8a8a8a;
+
+  /* Text. Body 16.7 to 1 and muted 5.7 to 1 on white. */
+  --color-text: #1e1e1e;
+  --color-text-muted: #666666;
+
+  /* Primary buttons: near-black fill with white text (16.7 to 1). */
+  --color-ink: #1e1e1e;
+  --color-ink-hover: #333333;
+  --color-on-ink: #ffffff;
+
+  /* Accent: tags, icons, links, active states, thin lines.
+     #800000 measures 10.95 to 1 on white. */
+  --color-accent: #800000;
+  --color-accent-hover: #400000;
+  --color-accent-soft: #f6eded;
+
+  /* Status. Each state always pairs its color with an icon and a word,
+     so meaning never depends on color alone. */
+  --color-warning-text: #7a4a00;
+  --color-warning-bg: #fff6e5;
+  --color-warning-border: #f0d19a;
+  --color-danger-text: #b42318;
+  --color-danger-bg: #fef3f2;
+  --color-danger-border: #f5c2bd;
+  --color-success-text: #05603a;
+  --color-success-bg: #ecfdf3;
+  --color-success-border: #a6e4c3;
+
+  /* Typography. Inter is loaded by next/font in layout.tsx, which sets
+     --font-inter on the html element. The size scale follows the classic
+     typographic scale: 12, 14, 16, 18, 21, 24, 36, 48 pixels. */
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.125rem;
+  --text-lg: 1.3125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2.25rem;
+  --text-3xl: 3rem;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --leading-tight: 1.2;
+  --leading-snug: 1.4;
+  --leading-body: 1.6;
+
+  /* Comfortable reading width for paragraphs, under 80 characters. */
+  --measure: 68ch;
+
+  /* Spacing, on a 4px base. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  /* Layout */
+  --content-max: 1080px;
+  --gutter: var(--space-5);
+
+  /* Shape. Small for controls, medium for cards, large for panels. */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* Depth. Borders carry most structure, so shadows stay faint. */
+  --shadow-sm: 0 1px 2px rgba(30, 30, 30, 0.06);
+  --shadow-md: 0 6px 16px rgba(30, 30, 30, 0.08);
+
+  /* Motion */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+
+  /* Keyboard focus ring: maroon on white measures 10.95 to 1. */
+  --focus-ring: 2px solid var(--color-accent);
+  --focus-offset: 2px;
+}
+
+/* Base reset */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  color: var(--color-text);
+  background-color: var(--color-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  line-height: var(--leading-tight);
+  font-weight: var(--weight-semibold);
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+  overflow-wrap: break-word;
+}
+
+img,
+picture,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: var(--color-accent);
+  text-underline-offset: 0.15em;
+}
+
+a:hover {
+  color: var(--color-accent-hover);
+}
+
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+::selection {
+  background-color: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+/* Hides text visually while keeping it available to screen readers. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Respect the operating system setting for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

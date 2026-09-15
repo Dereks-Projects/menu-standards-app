@@ -1,3 +1,37 @@
-ignoredBuiltDependencies:
-  - sharp
-  - unrs-resolver
+# Location: menu-standards-app/pnpm-workspace.yaml
+#
+# pnpm settings for this project, with supply-chain protections turned on.
+# pnpm 10 requires each protection to be set explicitly. pnpm 11 turns most
+# of them on by default, so these settings carry over when we upgrade.
+# Every setting below was checked against the pnpm 10.x settings reference.
+
+# Install scripts. pnpm 10 blocks every dependency's install script unless it
+# is listed here as true. sharp and unrs-resolver ship prebuilt binaries, so
+# their scripts stay off. This replaces the older ignoredBuiltDependencies list.
+allowBuilds:
+  sharp: false
+  unrs-resolver: false
+
+# Stop the install with an error, instead of a warning, if a new dependency
+# wants to run an install script that has not been reviewed and listed above.
+strictDepBuilds: true
+
+# Wait one day (1440 minutes) before installing any newly published version.
+# Malicious releases are usually detected and removed within that window.
+minimumReleaseAge: 1440
+
+# Refuse a package version whose publishing trust evidence is weaker than an
+# earlier release. A sudden drop is a common sign of a hijacked account.
+trustPolicy: no-downgrade
+
+# Apply the trust check only to versions published in the last 30 days
+# (43200 minutes). A takeover is dangerous while its release is new and
+# unreviewed. Older releases that were simply published without signatures
+# would otherwise block the install with false alarms. First case:
+# eslint-import-resolver-typescript 3.10.1, used by the Next.js lint rules,
+# reviewed on September 15, 2026 with no known vulnerabilities.
+trustPolicyIgnoreAfter: 43200
+
+# Dependencies of dependencies must come from the npm registry, never from a
+# git repository or a direct download link.
+blockExoticSubdeps: true

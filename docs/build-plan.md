@@ -20,7 +20,7 @@ Derek is the only user. Restaurants are records, not accounts: a **group** with 
 
 ---
 
-## Phase 1: Foundation
+## Phase 1: Foundation (complete)
 
 ### Done
 - [x] Tools updated: Node 24.21, pnpm 10.34.5 (one copy), Git 2.55
@@ -36,30 +36,33 @@ Derek is the only user. Restaurants are records, not accounts: a **group** with 
 - [x] `src/components/Header/Header.tsx` and `Header.module.css`
 - [x] `src/components/Footer/Footer.tsx` and `Footer.module.css`
 
-### To do
+### Also done
 - [x] `docs/build-plan.md`: this file
 - [x] `docs/decisions.md`: the decisions made so far and the reasons for each
-- [ ] `.env.example`: every secret name, no values
-- [ ] `next.config.ts`: security headers (block framing, strict referrer, content security policy)
+- [x] `.env.example`: every secret name, no values
+- [x] `next.config.ts`: security headers (block framing, strict referrer, content security policy)
 
-### Password gate
-- [ ] `src/proxy.ts`: locks every page and request not on the open list
-- [ ] `src/lib/auth/pass.ts`: creates and checks the signed 7-day pass
-- [ ] `src/lib/auth/password.ts`: checks the password against a stored fingerprint, slowly, with no hints
-- [ ] `scripts/hash-password.ts`: turns your password into that fingerprint, run on your computer only
-- [ ] `src/app/unlock/page.tsx` and `Unlock.module.css`: the password page
-- [ ] `src/app/api/unlock/route.ts`: checks the password, issues the pass
-- [ ] `src/app/api/lock/route.ts`: ends the pass on this device
-- [ ] Header: add **Lock** to the menu when unlocked
-- [ ] **Setting** Vercel: environment variables for the password fingerprint and pass signing key
-- [ ] **Setting** Vercel Firewall: limit password attempts
+### Password gate (done)
+- [x] `src/proxy.ts`: locks every page and request not on the open list
+- [x] `src/lib/auth/access.ts`: the open list and safe redirects after unlocking
+- [x] `src/lib/auth/pass.ts`: creates and checks the signed 7-day pass
+- [x] `src/lib/auth/password.ts`: checks the password against a stored fingerprint, slowly, with no hints
+- [x] `scripts/hash-password.mjs`: turns your password into that fingerprint, run on your computer only
+- [x] `src/app/unlock/page.tsx` and `Unlock.module.css`: the password page
+- [x] `src/app/api/unlock/route.ts`: checks the password, issues the pass
+- [x] `src/app/api/lock/route.ts`: ends the pass on this device
+- [x] Header: **Lock this device** in the menu, shown only on locked pages
+- [x] **Setting** Vercel: environment variables for the password fingerprint and pass signing key
+- [x] **Setting** Vercel Firewall: `/api/unlock` POST limited to 10 requests per 60 seconds per IP, refused for 30 minutes after that
+- [x] Verified live: locked pages ask for the password, the wrong password is refused, Lock ends the pass
 
 ---
 
-## Phase 2: Contracts
+## Phase 2: Contracts (current)
 
 The files every screen and AI step reads from and writes to.
 
+- [ ] `src/lib/auth/guard.ts`: pages and requests check the pass again themselves, so the gate is not the only lock
 - [ ] `src/lib/schemas/common.ts`: shared pieces (slugs, food or beverage track, allergen status, source links, version stamps)
 - [ ] `src/lib/schemas/tenant.ts`: groups (hotel or restaurant label) and outlets
 - [ ] `src/lib/schemas/menu.ts`: the reader's output

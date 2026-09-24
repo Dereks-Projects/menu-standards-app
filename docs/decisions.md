@@ -71,6 +71,14 @@
 
 **18. Everything is locked except a short open list:** the landing page, how it works, the unlock page, legal pages, and secret link pages.
 
+**18a. The gate is the front door, not the only lock.** Pages and requests that handle client data check the pass again themselves.
+*Why:* a single mistake in one file should never expose a client's program. Next.js gives the same guidance after a 2025 flaw that let attackers skip middleware checks.
+
+**18b. Password attempts are limited at Vercel's edge:** the unlock request is capped at 10 posts per 60 seconds per IP address, then refused for 30 minutes.
+*Why:* guessing is stopped before it reaches the app or costs anything. The app also checks the password slowly and pauses after a wrong answer.
+
+**18c. The pass cookie cannot be read by page code, and on the live site its name carries the browser's `__Host-` prefix,** which makes browsers reject it unless it is secure and tied to this exact domain.
+
 **19. Reserved names.** Slugs that collide with app pages are blocked. Slugs use lowercase letters, numbers, and hyphens, 2 to 40 characters, and never change once issued.
 *Why:* links already handed out must keep working.
 
@@ -144,3 +152,5 @@
 Pending pitch: automated tests.
 
 **39. Legal pages** (privacy policy, content policy, terms of use, cookies policy) are written at the right time, with the standard language each requires, before client data arrives.
+
+**40. Phase 1 closed on September 24, 2026,** with the gate verified on the live site: locked pages ask for the password, a wrong password is refused, and Lock ends the pass immediately.

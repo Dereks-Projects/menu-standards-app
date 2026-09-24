@@ -167,6 +167,27 @@
   font-weight: var(--weight-medium);
 }
 
+/* Ends the 7-day pass on this device. Shown only on locked pages. */
+.lockButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-accent);
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.lockButton:hover {
+  background-color: var(--color-surface-hover);
+}
+
 /* The current page is marked in the accent color. */
 .menuLink[aria-current="page"],
 .menuLink[aria-current="page"]:hover {

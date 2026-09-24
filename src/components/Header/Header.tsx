@@ -7,7 +7,12 @@
  * - Left: the Informative Media portfolio menu, on marketing pages only.
  *   Other pages show an empty space of the same width so the name stays
  *   centered.
- * - Right: the main menu.
+ * - Right: the main menu, which also holds the Lock button.
+ *
+ * The Lock button appears only on locked pages. Being on one means this
+ * device is unlocked, so there is nothing to read from the pass cookie,
+ * which browser code cannot see anyway. It posts a plain form, so it works
+ * even before the page's JavaScript loads.
  *
  * Accessibility: each menu button tells screen readers whether its panel
  * is open, the Escape key closes an open panel and returns focus to its
@@ -16,11 +21,12 @@
 
 "use client";
 
-import { ChevronDown, Menu, X } from "lucide-react";
+import { ChevronDown, Lock, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { isOpenPath, LOCK_API_PATH } from "@/lib/auth/access";
 import { siteConfig } from "@/config/site";
 
 import styles from "./Header.module.css";
@@ -48,6 +54,7 @@ export function Header() {
     openPanel !== null && openPanel.pathname === pathname ? openPanel.name : null;
 
   const showPortfolio = siteConfig.marketingPaths.includes(pathname);
+  const showLock = !isOpenPath(pathname);
 
   useEffect(() => {
     if (activePanel === null) {
@@ -197,6 +204,18 @@ export function Header() {
               );
             })}
           </ul>
+
+          {showLock && (
+            <>
+              <hr className={styles.divider} />
+              <form method="post" action={LOCK_API_PATH} onSubmit={closePanels}>
+                <button type="submit" className={styles.lockButton}>
+                  <Lock aria-hidden="true" size={16} />
+                  Lock this device
+                </button>
+              </form>
+            </>
+          )}
         </nav>
       </div>
     </header>

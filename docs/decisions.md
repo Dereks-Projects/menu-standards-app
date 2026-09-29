@@ -31,6 +31,10 @@
 **7. Service notes come from a curated library, never from the AI.** Each entry is marked standard (non-negotiable) or best practice. The build matches entries to menu items; the checker confirms every service note came from the library.
 *Why:* service steps such as the seafood fork or foie gras accompaniments must be exact.
 
+**7a. Service entries match by menu type as well as by text.** A beverage entry attaches only to beverage items and a food entry only to food items. Text triggers are matched whole word. The words "bottle" and "magnum" are treated as menu triggers rather than text, so an entry carrying either attaches to every item on a wine list and to nothing on a by-the-glass list, and the entry that requires pouring by-the-glass wine at the table attaches to every item on a by-the-glass list.
+*Why:* a wine list reads "Sancerre, Domaine Vacheron, 2023," so matching the word "bottle" would attach bottle service steps to nothing. Scoping by trigger rather than by entry also keeps serving temperature attached to wines by the glass, where it matters just as much.
+*Recorded:* September 24, 2026, with the service library approved at 37 entries and capped at 40.
+
 **8. PDFs come from the browser's print option.** Every printout is stamped with outlet, program version, and date.
 *Why:* no extra server software, and outdated sheets are easy to spot.
 

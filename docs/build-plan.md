@@ -62,23 +62,23 @@ Derek is the only user. Restaurants are records, not accounts: a **group** with 
 
 The files every screen and AI step reads from and writes to.
 
-- [ ] `src/lib/auth/guard.ts`: pages and requests check the pass again themselves, so the gate is not the only lock
-- [ ] `src/lib/schemas/common.ts`: shared pieces (slugs, food or beverage track, allergen status, source links, version stamps)
-- [ ] `src/lib/schemas/tenant.ts`: groups (hotel or restaurant label) and outlets
-- [ ] `src/lib/schemas/menu.ts`: the reader's output
+- [x] `src/lib/auth/guard.ts`: pages and requests check the pass again themselves, so the gate is not the only lock
+- [x] `src/lib/schemas/common.ts`: shared pieces (slugs, food or beverage track, allergen status, source links, version stamps)
+- [x] `src/lib/schemas/tenant.ts`: groups (hotel or restaurant label) and outlets
+- [x] `src/lib/schemas/menu.ts`: the reader's output
   - Menu types: food, cocktail, by the glass, bar, wine list, non-alcoholic, specials, other
   - Terms: universal or house, track, confidence
   - Allergens: extracted from the menu, or "confirm with chef"
   - House terms to confirm, each with a question
   - Group-level terms, shared by every outlet
-- [ ] `src/lib/schemas/program.ts`: the builder's output
+- [x] `src/lib/schemas/program.ts`: the builder's output
   - Synopsis, course, flashcards, role play, quizzes, one exam per track
   - Pre-shift note pool (fun facts and important notes), each linked to its source
   - Service notes (standard or best practice)
   - Checker report, version history (manager edited, chef confirmed)
-- [ ] `src/lib/schemas/links.ts`: secret links (manager, director, student, demo), status, expiry
-- [ ] `src/lib/schemas/service-library.ts`: the shape of a service library entry
-- [ ] `src/lib/slugs/reserved.ts`: reserved names and naming rules (lowercase, numbers, hyphens, 2 to 40 characters, never renamed)
+- [x] `src/lib/schemas/links.ts`: secret links (manager, director, student, demo), status, expiry
+- [x] `src/lib/schemas/service-library.ts`: the shape of a service library entry
+- [x] `src/lib/slugs/reserved.ts`: reserved names and naming rules (lowercase, numbers, hyphens, 2 to 40 characters, never renamed)
 - [ ] `content/foundations/service-library.md`: drafted by Claude, approved by Derek (about 12 categories)
 - [ ] Automated tests for schemas, slugs, passes, and link codes: to be pitched and discussed before adding
 

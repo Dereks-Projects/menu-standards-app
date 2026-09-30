@@ -10,9 +10,12 @@
  *   gathered the terms into one list, and recorded where the file came
  *   from. Every later step reads this shape.
  *
- * Two rules are enforced here rather than trusted to a prompt: allergens
- * carry a status instead of being written freely, and every term is marked
- * universal (from the foundations library) or house (only from this menu).
+ * Three rules are enforced here rather than trusted to a prompt:
+ * - allergens carry a status instead of being written freely,
+ * - every term is marked universal (from the foundations library) or house
+ *   (only from this menu),
+ * - the raw or undercooked warning (the consumer advisory) is recorded only
+ *   where the menu itself marks an item, never judged from the dish.
  */
 
 import { z } from "zod";
@@ -66,6 +69,12 @@ export const ReaderItemSchema = z.object({
   price: PriceSchema.default({ printed: "", amount: null, currency: "USD" }),
   track: TrackSchema,
   allergens: z.array(AllergenSchema).max(20).default([]),
+  /**
+   * True when the menu marks this item with its raw or undercooked warning,
+   * usually an asterisk. Read from the menu only. An unmarked tartare stays
+   * false; the checker, not the reader, raises that kind of concern.
+   */
+  consumerAdvisory: z.boolean().default(false),
   terms: z.array(ReaderTermSchema).max(40).default([]),
 });
 
@@ -84,6 +93,8 @@ export const ReaderMenuSchema = z.object({
   menuType: MenuTypeSchema,
   sections: z.array(ReaderSectionSchema).max(40),
   houseTermsToConfirm: z.array(ReaderHouseTermSchema).max(60).default([]),
+  /** The menu's raw or undercooked warning, copied word for word. Empty when there is none. */
+  consumerAdvisoryText: optionalText(800).default(""),
   /** Anything the reader could not read, for example a blurred photo. */
   readerNotes: z.array(shortText(200)).max(20).default([]),
 });
@@ -137,6 +148,8 @@ export const MenuSchema = z.object({
   /** Every term found on this menu, gathered into one list. */
   terms: z.array(TermSchema).max(600).default([]),
   houseTermsToConfirm: z.array(HouseTermConfirmationSchema).max(60).default([]),
+  /** The menu's raw or undercooked warning, copied word for word. */
+  consumerAdvisoryText: optionalText(800).default(""),
   readerNotes: z.array(shortText(200)).max(20).default([]),
   readAt: IsoDateTimeSchema,
   readModel: shortText(60),
@@ -168,6 +181,11 @@ export function itemCount(menu: Menu): number {
 /** House terms still waiting on the manager. */
 export function pendingHouseTerms(menu: Menu): HouseTermConfirmation[] {
   return menu.houseTermsToConfirm.filter((term) => term.status === "pending");
+}
+
+/** Items the menu marks with its raw or undercooked warning. */
+export function itemsWithConsumerAdvisory(menu: Menu): MenuItem[] {
+  return allItems(menu).filter((item) => item.consumerAdvisory);
 }
 
 /** The tracks this menu covers, decided by its items, not by its type. */

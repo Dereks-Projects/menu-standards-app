@@ -98,10 +98,10 @@ Settings first, then two tranches of files, then a light test and Milestone 1.
 - [x] Packages: `@vercel/blob` 2.8.0 and `openai` 7.23.0, pinned exactly (decision 46)
 
 ### Tranche A: storage
-- [ ] `src/lib/storage/blob.ts`: private file storage, organized by group and outlet, with unguessable file names
-- [ ] `src/lib/storage/index-store.ts`: the index file (groups, outlets, programs, links) until the database
-- [ ] `src/app/api/upload/route.ts`: presigned uploads, so the browser sends files straight to storage; checks the pass again through `guard.ts`
-- [ ] `pnpm lint` and `pnpm build` pass, then push
+- [x] `src/lib/storage/blob.ts`: private file storage, organized by group and outlet, with unguessable file names
+- [x] `src/lib/storage/index-store.ts`: the index file (groups, outlets, programs, links) until the database
+- [x] `src/app/api/upload/route.ts`: presigned uploads, so the browser sends files straight to storage; checks the pass again through `guard.ts`
+- [x] `pnpm lint` and `pnpm build` pass, then push
 
 ### Before Tranche B
 - [ ] Pitch: the Milestone 1 test harness (how menus in `private/` reach the reader before the Phase 4 upload screen exists, and how this computer reaches storage without `vercel env pull`)

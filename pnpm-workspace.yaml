@@ -8,7 +8,11 @@
 # Install scripts. pnpm 10 blocks every dependency's install script unless it
 # is listed here as true. sharp and unrs-resolver ship prebuilt binaries, so
 # their scripts stay off. This replaces the older ignoredBuiltDependencies list.
+# esbuild comes with tsx, the development tool that runs the reader's test
+# command on this computer only. Its program arrives through a separate
+# prebuilt package, so its script stays off too.
 allowBuilds:
+  esbuild: false
   sharp: false
   unrs-resolver: false
 

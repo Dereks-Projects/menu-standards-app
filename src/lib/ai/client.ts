@@ -34,8 +34,20 @@ import { estimateCostUsd, type ModelId, type ReasoningEffort, STEP_SETTINGS } fr
 /** One attempt, plus one corrected attempt. */
 const MAX_ATTEMPTS = 2;
 
-/** How long one request may take before it is abandoned. */
-const REQUEST_TIMEOUT_MS = 5 * 60 * 1000;
+/**
+ * How long one request may take before it is abandoned. Reading the
+ * Bourbon Steak dinner menu at Milestone 1 took more than 5 minutes on a
+ * slow day, so the limit is 10. The read route allows 800 seconds in all.
+ */
+const REQUEST_TIMEOUT_MS = 10 * 60 * 1000;
+
+/**
+ * The OpenAI library would otherwise resend a failed or abandoned request
+ * on its own. An abandoned request is still billed, and a resend doubles
+ * the wait and the cost without anyone seeing it, so a failure is reported
+ * plainly instead and the person decides whether to try again.
+ */
+const LIBRARY_RETRIES = 0;
 
 /** OpenAI accepts up to 50 MB of files per request; stay safely under. */
 const MAX_REQUEST_FILE_BYTES = 45 * 1024 * 1024;
@@ -211,7 +223,7 @@ function getOpenAI(): OpenAI {
   if (apiKey === undefined || apiKey.trim().length === 0) {
     throw new AiStepError("not_configured", "OPENAI_API_KEY is not set.");
   }
-  openai = new OpenAI({ apiKey, timeout: REQUEST_TIMEOUT_MS, maxRetries: 1 });
+  openai = new OpenAI({ apiKey, timeout: REQUEST_TIMEOUT_MS, maxRetries: LIBRARY_RETRIES });
   return openai;
 }
 

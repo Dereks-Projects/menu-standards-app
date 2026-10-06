@@ -46,9 +46,13 @@ export const MenuTypeSchema = z.enum([
   "other",
 ]);
 
-/** Price as printed, plus the number when one can be read. */
+/**
+ * Price as printed, plus the number when one can be read. An item offered
+ * in several sizes or grades keeps every option in one printed price, for
+ * example "1 oz daurenki 175 | 1 oz baika 250 | tasting trio 690".
+ */
 export const PriceSchema = z.object({
-  printed: optionalText(40).default(""),
+  printed: optionalText(120).default(""),
   amount: z.number().nonnegative().max(100000).nullable().default(null),
   currency: z.string().trim().length(3).default("USD"),
 });

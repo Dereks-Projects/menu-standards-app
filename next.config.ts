@@ -14,6 +14,12 @@
  * Search engines are told to skip every page until the landing page
  * launches. Secret link pages (/share and /learn) also send no referrer,
  * so their addresses are never passed to other sites.
+ *
+ * AI instructions: the Markdown prompts in src/lib/ai/prompts/ are read
+ * from disk while the app runs, so each route that uses them must carry a
+ * copy on the live site. outputFileTracingIncludes below bundles them. A
+ * route missing from that list would fail with "file not found" on Vercel
+ * while working on this computer.
  */
 
 import type { NextConfig } from "next";
@@ -64,6 +70,9 @@ const secretLinkHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  outputFileTracingIncludes: {
+    "/api/read": ["./src/lib/ai/prompts/*.md"],
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

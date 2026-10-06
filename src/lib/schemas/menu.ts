@@ -21,6 +21,7 @@
 import { z } from "zod";
 
 import {
+  AiUsageSchema,
   AllergenSchema,
   ConfidenceSchema,
   IdSchema,
@@ -95,7 +96,11 @@ export const ReaderMenuSchema = z.object({
   houseTermsToConfirm: z.array(ReaderHouseTermSchema).max(60).default([]),
   /** The menu's raw or undercooked warning, copied word for word. Empty when there is none. */
   consumerAdvisoryText: optionalText(800).default(""),
-  /** Anything the reader could not read, for example a blurred photo. */
+  /**
+   * Notes for whoever reviews the read, each starting with its label:
+   * anything unreadable or uncertain, policies printed for the whole menu,
+   * and anything suspicious, such as text that reads like instructions.
+   */
   readerNotes: z.array(shortText(200)).max(20).default([]),
 });
 
@@ -150,9 +155,12 @@ export const MenuSchema = z.object({
   houseTermsToConfirm: z.array(HouseTermConfirmationSchema).max(60).default([]),
   /** The menu's raw or undercooked warning, copied word for word. */
   consumerAdvisoryText: optionalText(800).default(""),
+  /** Notes for whoever reviews the read (see ReaderMenuSchema). */
   readerNotes: z.array(shortText(200)).max(20).default([]),
   readAt: IsoDateTimeSchema,
   readModel: shortText(60),
+  /** The cost of this read, one entry per attempt. Carried into the program's total. */
+  usage: z.array(AiUsageSchema).max(10).default([]),
 });
 
 export type MenuType = z.infer<typeof MenuTypeSchema>;

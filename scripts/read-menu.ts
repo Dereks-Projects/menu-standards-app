@@ -34,6 +34,10 @@
  * which Git ignores. Each file name carries the model and thinking level.
  * The OpenAI key comes from .env.local (the local key). Every run costs
  * money, and the cost is printed at the end.
+ *
+ * When a read fails, the reason OpenAI or the network gave is printed
+ * under the failure, with anything that looks like a key hidden, so a
+ * failure can be diagnosed instead of guessed at.
  */
 
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
@@ -81,6 +85,12 @@ const FILE_TYPES: Readonly<Record<string, MenuFileType>> = {
 
 /** How many names to print before summarizing the rest. */
 const MAX_LISTED = 15;
+
+/** How many layers of "caused by" to follow when explaining a failure. */
+const MAX_CAUSE_DEPTH = 4;
+
+/** The longest one printed reason may run, in characters. */
+const MAX_REASON_LENGTH = 300;
 
 const USAGE = [
   "Usage:",
@@ -374,14 +384,83 @@ function reportDifferences(first: Run, second: Run): void {
   console.log(lines.join("\n"));
 }
 
+/* Explaining a failure */
+
+/** One property of an error, read without trusting its shape. */
+function readField(value: unknown, key: string): unknown {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+  return (value as Record<string, unknown>)[key];
+}
+
+/** Hides anything shaped like an OpenAI key, and keeps the text to one short line. */
+function cleanReason(text: string): string {
+  const oneLine = text
+    .replace(/sk-[A-Za-z0-9_-]{8,}/g, "sk-[hidden]")
+    .replace(/\s+/g, " ")
+    .trim();
+  return oneLine.length > MAX_REASON_LENGTH ? `${oneLine.slice(0, MAX_REASON_LENGTH)}...` : oneLine;
+}
+
+/**
+ * One layer of a failure, such as "RateLimitError (status 429, code
+ * rate_limit_exceeded, request ID req_123): Rate limit reached...". The
+ * request ID lets OpenAI support find the exact request.
+ */
+function describeCause(cause: unknown): string {
+  if (!(cause instanceof Error)) {
+    return cleanReason(String(cause));
+  }
+  const label = cause.name !== "Error" ? cause.name : cause.constructor.name;
+  const details: string[] = [];
+  const status = readField(cause, "status");
+  if (typeof status === "number") {
+    details.push(`status ${status}`);
+  }
+  const code = readField(cause, "code");
+  if ((typeof code === "string" && code.length > 0) || typeof code === "number") {
+    details.push(`code ${code}`);
+  }
+  const requestId = readField(cause, "requestID") ?? readField(cause, "request_id");
+  if (typeof requestId === "string" && requestId.length > 0) {
+    details.push(`request ID ${requestId}`);
+  }
+  const heading = details.length > 0 ? `${label} (${details.join(", ")})` : label;
+  return cleanReason(`${heading}: ${cause.message}`);
+}
+
+/** The chain of reasons beneath a failure, outermost first, each listed once. */
+function failureReasons(error: unknown): string[] {
+  const reasons: string[] = [];
+  const seen = new Set<unknown>([error]);
+  let current: unknown = error instanceof Error ? error.cause : undefined;
+  while (reasons.length < MAX_CAUSE_DEPTH && current !== undefined && current !== null && !seen.has(current)) {
+    seen.add(current);
+    reasons.push(describeCause(current));
+    current = current instanceof Error ? current.cause : undefined;
+  }
+  return reasons;
+}
+
 function reportFailure(settings: ReadSettings, error: unknown): void {
+  const reasons = failureReasons(error).map((reason, index) => `  ${index === 0 ? "Reason" : "Caused by"}: ${reason}`);
+
   if (error instanceof AiStepError) {
     const cost = error.usage.reduce((total, entry) => total + entry.costUsd, 0);
     console.error(`\nRead by ${describe(settings)} failed (${error.kind}): ${error.message}`);
-    console.error(`  Cost of the failed attempts: ${money(cost)}`);
+    reasons.forEach((line) => console.error(line));
+    if (error.kind === "request_failed") {
+      // No usage comes back for a request that fails in transit, so any
+      // charge for it shows only on OpenAI's usage page (decision 53).
+      console.error(`  Cost recorded: ${money(cost)}. Any charge for the failed request shows only on OpenAI's usage page.`);
+    } else {
+      console.error(`  Cost of the failed attempts: ${money(cost)}`);
+    }
     return;
   }
   console.error(`\nRead by ${describe(settings)} failed: ${error instanceof Error ? error.message : String(error)}`);
+  reasons.forEach((line) => console.error(line));
 }
 
 /* Main */

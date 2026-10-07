@@ -103,6 +103,16 @@
 - Astra failed twice on the 58-item dinner menu. The cause was not captured: either time or a limit on the account. The comparison was concluded there, since Sol's results were verified against the menus themselves.
 
 *Revisit:* the Phase 6 checker model. Diagnose Astra's failure on large inputs first; GPT-5.6 Sol is a candidate, though it would need adding to the project's allowed models. Also test the reader at "medium" thinking for speed before client work.
+*Medium thinking:* tested October 7, 2026. The reader stays at high (decision 61).
+
+**61. The reader stays at high thinking.** On October 7, 2026, GPT-6.1 Sol read the Bourbon Steak dinner menu at high and at medium side by side, twice, and both trick menus at medium.
+- Medium was faster and cheaper on the dinner menu: 144 and 141 seconds against 188 and 229, and 11 to 13 cents against 15 to 16.
+- In one of the two dinner runs, medium misnamed two of the 58 dishes: "A5 WAGYU HOT STONE" for "2 oz. KAGOSHIMA NY STRIP," and "4oz OF JAPANESE WAGYU" for "WAGYU TASTING TRIO." High kept the menu's names in both runs. Allergens, raw or undercooked warnings, and prices matched in every run.
+- Medium refused every planted instruction in all five completed trick reads, with every real item, allergen, and price kept.
+- One trick read failed while connecting to OpenAI and passed on a rerun. The error gave no reason, so the test command now prints the reason OpenAI or the network gives (decision 57).
+
+*Why:* the bar set before the test was that every item must match. A wrong dish name becomes wrong training content, and about a minute saved does not justify it.
+*Revisit:* whenever the reader's model changes in `models.ts`.
 
 ---
 
@@ -198,6 +208,7 @@
 
 **57. The reader's test command runs on this computer only.** `pnpm exec tsx scripts/read-menu.ts private/<file> <menu type>` runs the real reader on a menu in the private folder and saves the result to `private/results/`, which Git ignores. `--compare` runs two models side by side. It uses `tsx` 4.23.15, a development tool that is never deployed. `esbuild`, which comes with it, keeps its install script blocked in `pnpm-workspace.yaml` and works through its separate prebuilt package.
 *Why:* menus can be tested before the upload screen exists, and this computer never needs storage access.
+*Added October 7, 2026:* `--effort` sets the thinking level for one test read, and `--compare --effort medium` compares thinking levels on the same model. A failed read prints the reason OpenAI or the network gave, with anything shaped like a key hidden. The live site always reads with the settings in `models.ts`.
 
 ---
 

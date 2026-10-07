@@ -8,27 +8,39 @@
  * Run from the top level of menu-standards-app:
  *
  *   pnpm exec tsx scripts/read-menu.ts private/<file> <menu type>
- *   pnpm exec tsx scripts/read-menu.ts private/<file> <menu type> --compare
+ *   pnpm exec tsx scripts/read-menu.ts private/<file> <menu type> --effort medium
  *   pnpm exec tsx scripts/read-menu.ts private/<file> <menu type> --model gpt-6-astra
+ *   pnpm exec tsx scripts/read-menu.ts private/<file> <menu type> --compare
+ *   pnpm exec tsx scripts/read-menu.ts private/<file> <menu type> --compare --effort medium
  *
  * Menu types: food, cocktail, by_the_glass, bar, wine_list, non_alcoholic,
- * specials, other.
+ * specials, other. Thinking levels: low, medium, high, xhigh, max.
  *
- * --compare reads the same file with the reader's model (see models.ts) and
- * with GPT-6 Astra at the same time, then lists where they disagree: items
- * one found and the other missed, allergens, raw or undercooked warnings,
- * and prices. This is the Milestone 1 comparison.
+ * Without --compare, one read runs with the reader's settings from
+ * models.ts, changed by --model or --effort for that read only.
+ *
+ * --compare reads the same file twice at the same time, so both reads face
+ * the same conditions, then lists where they disagree: items one found and
+ * the other missed, allergens, raw or undercooked warnings, and prices.
+ * The first read always uses the reader's settings from models.ts. The
+ * second uses --model and --effort where given:
+ * - --compare alone compares with GPT-6 Astra (the Milestone 1 comparison).
+ * - --compare --effort medium compares the same model at medium thinking.
+ *
+ * --model and --effort change this command only. The live site always
+ * reads with the settings in models.ts.
  *
  * Results are client data, so they are written only to private/results/,
- * which Git ignores. The OpenAI key comes from .env.local (the local key).
- * Every run costs money, and the cost is printed at the end.
+ * which Git ignores. Each file name carries the model and thinking level.
+ * The OpenAI key comes from .env.local (the local key). Every run costs
+ * money, and the cost is printed at the end.
  */
 
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { AiStepError } from "@/lib/ai/client";
-import { isModelId, type ModelId, STEP_SETTINGS } from "@/lib/ai/models";
+import { isModelId, MODEL_IDS, type ModelId, type ReasoningEffort, STEP_SETTINGS } from "@/lib/ai/models";
 import { type MenuFileType, newMenuId, readMenu, type ReadMenuResult } from "@/lib/engine/read";
 import {
   allItems,
@@ -43,6 +55,18 @@ import {
 import { MAX_UPLOAD_BYTES } from "@/lib/storage/blob";
 
 const COMPARISON_MODEL: ModelId = "gpt-6-astra";
+
+/**
+ * Every thinking level models.ts allows. Written as a record, so the type
+ * check fails if this list and models.ts ever disagree.
+ */
+const EFFORT_LEVELS: Readonly<Record<ReasoningEffort, true>> = {
+  low: true,
+  medium: true,
+  high: true,
+  xhigh: true,
+  max: true,
+};
 
 /** Test reads are never stored, so they use a fixed, obviously local outlet. */
 const TEST_SLUG = "local-test";
@@ -60,11 +84,17 @@ const MAX_LISTED = 15;
 
 const USAGE = [
   "Usage:",
-  "  pnpm exec tsx scripts/read-menu.ts private/<file> <menu type> [--compare | --model <model>]",
+  "  pnpm exec tsx scripts/read-menu.ts private/<file> <menu type> [--compare] [--model <model>] [--effort <level>]",
   "Menu types: food, cocktail, by_the_glass, bar, wine_list, non_alcoholic, specials, other",
+  `Models: ${MODEL_IDS.join(", ")}`,
+  `Thinking levels: ${Object.keys(EFFORT_LEVELS).join(", ")}`,
 ].join("\n");
 
 class UsageError extends Error {}
+
+function isReasoningEffort(value: string): value is ReasoningEffort {
+  return Object.hasOwn(EFFORT_LEVELS, value);
+}
 
 /* Arguments */
 
@@ -73,23 +103,47 @@ type Options = {
   readonly menuType: MenuType;
   readonly compare: boolean;
   readonly model: ModelId | undefined;
+  readonly effort: ReasoningEffort | undefined;
 };
+
+/** The word after an option, such as "medium" after --effort. */
+function optionValue(args: readonly string[], index: number, option: string): string {
+  const value = args[index + 1];
+  if (value === undefined || value.startsWith("--")) {
+    throw new UsageError(`Give a value after ${option}.`);
+  }
+  return value.toLowerCase();
+}
 
 function parseArguments(args: readonly string[]): Options {
   const positional: string[] = [];
   let compare = false;
   let model: ModelId | undefined;
+  let effort: ReasoningEffort | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index] ?? "";
     if (arg === "--compare") {
       compare = true;
     } else if (arg === "--model") {
-      const value = args[index + 1] ?? "";
+      if (model !== undefined) {
+        throw new UsageError("Give --model only once.");
+      }
+      const value = optionValue(args, index, arg);
       if (!isModelId(value)) {
         throw new UsageError(`Unknown model "${value}".`);
       }
       model = value;
+      index += 1;
+    } else if (arg === "--effort") {
+      if (effort !== undefined) {
+        throw new UsageError("Give --effort only once.");
+      }
+      const value = optionValue(args, index, arg);
+      if (!isReasoningEffort(value)) {
+        throw new UsageError(`Unknown thinking level "${value}".`);
+      }
+      effort = value;
       index += 1;
     } else if (arg.startsWith("--")) {
       throw new UsageError(`Unknown option "${arg}".`);
@@ -106,10 +160,24 @@ function parseArguments(args: readonly string[]): Options {
   if (!menuType.success) {
     throw new UsageError(`Unknown menu type "${typeText}".`);
   }
-  if (compare && model !== undefined) {
-    throw new UsageError("Use --compare or --model, not both.");
-  }
-  return { filePath, menuType: menuType.data, compare, model };
+  return { filePath, menuType: menuType.data, compare, model, effort };
+}
+
+/* Read settings */
+
+/** The model and thinking level for one read. */
+type ReadSettings = {
+  readonly model: ModelId;
+  readonly effort: ReasoningEffort;
+};
+
+/** "gpt-6.1-sol at high thinking". */
+function describe(settings: ReadSettings): string {
+  return `${settings.model} at ${settings.effort} thinking`;
+}
+
+function sameSettings(first: ReadSettings, second: ReadSettings): boolean {
+  return first.model === second.model && first.effort === second.effort;
 }
 
 /* The file */
@@ -155,7 +223,7 @@ async function loadMenuFile(filePath: string): Promise<LoadedFile> {
 /* Reading */
 
 type Run = {
-  readonly model: ModelId;
+  readonly settings: ReadSettings;
   readonly seconds: number;
   readonly result: ReadMenuResult;
   readonly savedTo: string;
@@ -165,7 +233,7 @@ function stamp(date: Date): string {
   return date.toISOString().replace(/[-:]/g, "").replace("T", "-").slice(0, 15);
 }
 
-async function runRead(file: LoadedFile, menuType: MenuType, model: ModelId): Promise<Run> {
+async function runRead(file: LoadedFile, menuType: MenuType, settings: ReadSettings): Promise<Run> {
   const started = Date.now();
   const result = await readMenu({
     menuId: newMenuId(menuType),
@@ -179,30 +247,33 @@ async function runRead(file: LoadedFile, menuType: MenuType, model: ModelId): Pr
       blobPath: `local/${file.relativePath}`,
       uploadedAt: file.uploadedAt,
     },
-    model,
+    model: settings.model,
+    effort: settings.effort,
   });
   const seconds = Math.round((Date.now() - started) / 1000);
 
   const folder = path.resolve("private", "results");
   await mkdir(folder, { recursive: true });
   const stem = path.parse(file.fileName).name.replace(/[^A-Za-z0-9-]+/g, "-");
-  const savedTo = path.join(folder, `${stem}-${model}-${stamp(new Date())}.json`);
+  const savedTo = path.join(folder, `${stem}-${settings.model}-${settings.effort}-${stamp(new Date())}.json`);
   await writeFile(
     savedTo,
     JSON.stringify(
       {
-        menu: result.menu,
+        model: settings.model,
+        effort: settings.effort,
+        seconds,
         attempts: result.attempts,
         droppedTerms: result.droppedTerms,
         droppedQuestions: result.droppedQuestions,
-        seconds,
+        menu: result.menu,
       },
       null,
       2,
     ),
     "utf8",
   );
-  return { model, seconds, result, savedTo: path.relative(process.cwd(), savedTo) };
+  return { settings, seconds, result, savedTo: path.relative(process.cwd(), savedTo) };
 }
 
 /* Reporting */
@@ -233,7 +304,7 @@ function report(file: LoadedFile, menuType: MenuType, run: Run): void {
   const withAllergens = allItems(menu).filter((item) => item.allergens.length > 0);
   const lines = [
     "",
-    `${file.fileName} (${menuType}), read by ${run.model}`,
+    `${file.fileName} (${menuType}), read by ${describe(run.settings)}`,
     `  ${count(run.seconds, "second")}, ${count(run.result.attempts, "attempt")}, ${money(costOf(menu))}`,
     `  Sections: ${menu.sections.length}   Items: ${itemCount(menu)}   Terms: ${menu.terms.length}`,
     `  Raw or undercooked warning on ${count(itemsWithConsumerAdvisory(menu).length, "item")}: ${listNames(itemsWithConsumerAdvisory(menu).map((item) => item.name))}`,
@@ -291,10 +362,10 @@ function reportDifferences(first: Run, second: Run): void {
 
   const lines = [
     "",
-    `Comparison: ${first.model} vs ${second.model}`,
+    `Comparison: ${describe(first.settings)} vs ${describe(second.settings)}`,
     `  Items: ${itemCount(first.result.menu)} vs ${itemCount(second.result.menu)}`,
-    `  Found only by ${first.model}: ${listNames(onlyFirst)}`,
-    `  Found only by ${second.model}: ${listNames(onlySecond)}`,
+    `  Found only by ${describe(first.settings)}: ${listNames(onlyFirst)}`,
+    `  Found only by ${describe(second.settings)}: ${listNames(onlySecond)}`,
     `  Same item, different reading (${differences.length}):`,
     ...(differences.length === 0 ? ["    none"] : differences),
     `  Cost: ${money(costOf(first.result.menu))} vs ${money(costOf(second.result.menu))}`,
@@ -303,14 +374,14 @@ function reportDifferences(first: Run, second: Run): void {
   console.log(lines.join("\n"));
 }
 
-function reportFailure(model: ModelId, error: unknown): void {
+function reportFailure(settings: ReadSettings, error: unknown): void {
   if (error instanceof AiStepError) {
     const cost = error.usage.reduce((total, entry) => total + entry.costUsd, 0);
-    console.error(`\nRead by ${model} failed (${error.kind}): ${error.message}`);
+    console.error(`\nRead by ${describe(settings)} failed (${error.kind}): ${error.message}`);
     console.error(`  Cost of the failed attempts: ${money(cost)}`);
     return;
   }
-  console.error(`\nRead by ${model} failed: ${error instanceof Error ? error.message : String(error)}`);
+  console.error(`\nRead by ${describe(settings)} failed: ${error instanceof Error ? error.message : String(error)}`);
 }
 
 /* Main */
@@ -323,37 +394,50 @@ async function main(): Promise<void> {
   }
 
   const options = parseArguments(process.argv.slice(2));
-  const file = await loadMenuFile(options.filePath);
-  const readerModel = STEP_SETTINGS.reader.model;
+  const reader: ReadSettings = { model: STEP_SETTINGS.reader.model, effort: STEP_SETTINGS.reader.effort };
 
   if (!options.compare) {
-    const model = options.model ?? readerModel;
+    const settings: ReadSettings = {
+      model: options.model ?? reader.model,
+      effort: options.effort ?? reader.effort,
+    };
+    const file = await loadMenuFile(options.filePath);
     try {
-      report(file, options.menuType, await runRead(file, options.menuType, model));
+      report(file, options.menuType, await runRead(file, options.menuType, settings));
     } catch (error) {
-      reportFailure(model, error);
+      reportFailure(settings, error);
       process.exitCode = 1;
     }
     return;
   }
 
-  console.log(`Reading ${file.fileName} with ${readerModel} and ${COMPARISON_MODEL} at the same time...`);
-  const models = [readerModel, COMPARISON_MODEL] as const;
-  const outcomes = await Promise.allSettled(models.map((model) => runRead(file, options.menuType, model)));
+  // With neither option, the second read is the Milestone 1 comparison model.
+  const second: ReadSettings = {
+    model: options.model ?? (options.effort === undefined ? COMPARISON_MODEL : reader.model),
+    effort: options.effort ?? reader.effort,
+  };
+  if (sameSettings(reader, second)) {
+    throw new UsageError(`Both reads would use ${describe(reader)}. Change --model or --effort.`);
+  }
+
+  const file = await loadMenuFile(options.filePath);
+  console.log(`Reading ${file.fileName} with ${describe(reader)} and ${describe(second)} at the same time...`);
+  const reads = [reader, second] as const;
+  const outcomes = await Promise.allSettled(reads.map((settings) => runRead(file, options.menuType, settings)));
   const runs: Run[] = [];
   outcomes.forEach((outcome, index) => {
-    const model = models[index] ?? readerModel;
+    const settings = reads[index] ?? reader;
     if (outcome.status === "fulfilled") {
       report(file, options.menuType, outcome.value);
       runs.push(outcome.value);
     } else {
-      reportFailure(model, outcome.reason);
+      reportFailure(settings, outcome.reason);
       process.exitCode = 1;
     }
   });
-  const [first, second] = runs;
-  if (first !== undefined && second !== undefined) {
-    reportDifferences(first, second);
+  const [first, other] = runs;
+  if (first !== undefined && other !== undefined) {
+    reportDifferences(first, other);
   }
 }
 

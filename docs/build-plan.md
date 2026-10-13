@@ -139,16 +139,25 @@ Settings first, then two tranches of files, then a light test and Milestone 1. C
 
 A minimal "new group" form comes first, because every upload belongs to an outlet.
 
-Carried forward from Phase 3:
-- [ ] `next.config.ts`: allow the browser to send files to Vercel Blob. The security policy currently blocks it; the exact storage address is confirmed in the browser with the upload screen, not guessed
-- [ ] The upload screen refuses iPhone HEIC photos with a clear message, since the reader cannot read them
-- [ ] Reader speed: compare "high" and "medium" thinking on the dinner menu before client work (reads take 1 to 3.5 minutes at "high")
+### Reader speed (done)
+- [x] Compared "high" and "medium" thinking on the dinner menu, twice, and ran both trick menus at medium. The reader stays at high (decision 61)
+- [x] `scripts/read-menu.ts`: `--effort` sets the thinking level for one test read, `--compare --effort medium` compares thinking levels, and a failed read prints the reason OpenAI or the network gave (decision 57)
 
-- [ ] `src/app/(admin)/restaurants/new/page.tsx`: create a group and its outlets, with slug checks
-- [ ] `src/components/ui/`: shared building blocks (button, field, card, status badge), added as needed
-- [ ] `src/app/(admin)/[group]/[outlet]/upload/page.tsx`
-- [ ] `src/components/upload/UploadField.tsx`: drop zone, reads on drop, shows the item count
+### New group (done)
+- [x] `src/app/(admin)/restaurants/new/page.tsx`, `NewGroupForm.tsx`, and `NewGroup.module.css`: record a group and its outlets, with address checks
+- [x] `src/lib/tenants/create-group.ts`: the rules a new group follows
+- [x] `src/app/api/groups/route.ts`: saves a new group; checks the pass, that the request came from this site, the rules, and duplicate addresses
+- [x] **Setting** New admin password, October 12, 2026, in `.env.local` and Vercel. The earlier one was not on record
+- [x] Verified live: empty and invalid forms refused, Test Kitchen saved, and its address refused a second time by the server
+
+### Upload screen
+- [ ] `src/app/(admin)/[group]/[outlet]/upload/page.tsx`: the upload screen for one outlet
+- [ ] `src/components/upload/UploadField.tsx`: drop zone, reads on drop, shows the item count; refuses iPhone HEIC photos with a way around it, since the reader cannot read them
 - [ ] `src/components/upload/OtherMenuField.tsx`: type dropdown (bar menu, full wine list, non-alcoholic list, specials, other), can repeat
+- [ ] `src/components/upload/Upload.module.css`
+- [ ] `next.config.ts`: allow the browser to send files to Vercel Blob. The security policy currently blocks it; the exact storage address is confirmed in the browser with the upload screen, not guessed
+- [ ] Verified live with Test Kitchen: a menu sent, read, and counted, and a HEIC photo refused
+- [ ] `src/components/ui/`: shared building blocks (button, field, card, status badge), added as needed
 
 ---
 
@@ -212,6 +221,7 @@ One set of pages with two modes: your workspace (editable) and the manager link 
   - Every group and outlet with program status
   - All open flags, every link and its status, demo days remaining
   - Cost per build, last menu upload, New group button
+- [ ] Edit, archive, or delete groups and outlets (requested October 12, 2026; none of this exists yet)
 - [ ] `src/app/(admin)/[group]/page.tsx`: director page (sample completion data)
 - [ ] `src/lib/links/tokens.ts`: creates link codes, stores only their fingerprints
 - [ ] `src/app/api/links/route.ts`: create, cancel, reissue

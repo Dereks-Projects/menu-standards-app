@@ -1,5 +1,5 @@
 /*
- * Location: menu-standards-app/src/app/(admin)/restaurants/new/NewGroupForm.tsx
+ * Location: menu-standards-app/src/app/admin/new/NewGroupForm.tsx
  *
  * The new group form, shown by page.tsx in this folder. It records a
  * single restaurant, a hotel, or a restaurant group, with its outlets, and
@@ -14,6 +14,9 @@
  * - Save is refused while a save is in progress, so one press saves once.
  * - The server's reply is checked against the group and outlet schemas
  *   before anything from it is shown.
+ * - Once saved, each outlet links to its upload screen.
+ *
+ * Addresses are shown as they appear in the browser, under /admin.
  *
  * Accessibility: every field has a visible label, errors pair an icon with
  * words and are linked to their field, and focus moves to the result after
@@ -36,7 +39,20 @@ import type { MAX_NEW_OUTLETS, NewGroupRequest } from "@/lib/tenants/create-grou
 import styles from "./NewGroup.module.css";
 
 const SAVE_PATH = "/api/groups";
-const PAGE_PATH = "/restaurants/new";
+const PAGE_PATH = "/admin/new";
+
+/** Every admin page lives under this address. */
+const ADMIN_PATH = "/admin";
+
+/** "/admin/seagate", as the browser shows a group's address. */
+function adminGroupPath(groupSlug: string): string {
+  return `${ADMIN_PATH}${groupPath(groupSlug)}`;
+}
+
+/** "/admin/seagate/pool-bar", as the browser shows an outlet's address. */
+function adminOutletPath(groupSlug: string, outletSlug: string): string {
+  return `${ADMIN_PATH}${outletPath(groupSlug, outletSlug)}`;
+}
 
 /*
  * Limits from src/lib/tenants/create-group.ts, which the server enforces.
@@ -388,22 +404,27 @@ export function NewGroupForm() {
           <span>Saved {group.name}</span>
         </h2>
         <p className={styles.successLead}>
-          {isSingle ? "Its address is below." : "Its outlets and their addresses are below."} Addresses never change.
+          {isSingle ? "Its address is below." : "Its outlets and their addresses are below."} Next, upload
+          {isSingle ? " its menus." : " each outlet's menus."}
         </p>
         <ul className={styles.savedList}>
-          {isSingle ? (
-            <li className={styles.savedItem}>
-              <span>{group.name}</span>
-              <code className={styles.address}>{groupPath(group.slug)}</code>
+          {outlets.map((outlet) => (
+            <li key={outlet.outletId} className={styles.savedItem}>
+              <span className={styles.savedName}>
+                <span>{isSingle ? group.name : outlet.name}</span>
+                <code className={styles.address}>
+                  {isSingle ? adminGroupPath(group.slug) : adminOutletPath(group.slug, outlet.slug)}
+                </code>
+              </span>
+              <Link
+                href={`${adminOutletPath(group.slug, outlet.slug)}/upload`}
+                className={styles.uploadLink}
+                aria-label={`Upload menus for ${isSingle ? group.name : outlet.name}`}
+              >
+                Upload menus
+              </Link>
             </li>
-          ) : (
-            outlets.map((outlet) => (
-              <li key={outlet.outletId} className={styles.savedItem}>
-                <span>{outlet.name}</span>
-                <code className={styles.address}>{outletPath(group.slug, outlet.slug)}</code>
-              </li>
-            ))
-          )}
+          ))}
         </ul>
         <button type="button" className={styles.secondaryButton} onClick={startOver}>
           Add another group
@@ -415,7 +436,7 @@ export function NewGroupForm() {
   /* The form itself */
 
   const showOutlets = hasOutlets(draft.kind);
-  const groupAddress = draft.slug.length > 0 ? groupPath(draft.slug) : null;
+  const groupAddress = draft.slug.length > 0 ? adminGroupPath(draft.slug) : null;
 
   return (
     <form className={styles.form} onSubmit={handleSubmit} noValidate aria-busy={isSaving}>
@@ -536,7 +557,7 @@ export function NewGroupForm() {
             {draft.outlets.map((row, index) => {
               const headingId = fieldId(`${row.key}.heading`);
               const outletAddress =
-                draft.slug.length > 0 && row.slug.length > 0 ? outletPath(draft.slug, row.slug) : null;
+                draft.slug.length > 0 && row.slug.length > 0 ? adminOutletPath(draft.slug, row.slug) : null;
               return (
                 <div key={row.key} role="group" aria-labelledby={headingId} className={styles.outlet}>
                   <div className={styles.outletHeader}>

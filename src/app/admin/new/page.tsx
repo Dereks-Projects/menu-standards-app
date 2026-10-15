@@ -1,16 +1,16 @@
 /*
- * Location: menu-standards-app/src/app/(admin)/restaurants/new/page.tsx
+ * Location: menu-standards-app/src/app/admin/new/page.tsx
  *
- * The new group page, at /restaurants/new. A restaurant, hotel, or
- * restaurant group and its outlets are recorded here before any menu is
- * uploaded, because every upload belongs to an outlet.
+ * The new group page, at /admin/new. A group and its outlets are recorded
+ * here before any menu is uploaded, because every upload belongs to an
+ * outlet.
  *
  * Locked. The password gate (src/proxy.ts) checks first, and this page
  * checks the pass again itself (decision 18a). The gate is a door and a
  * cost control, not user accounts.
  *
- * The (admin) folder groups the locked admin pages. Parentheses around a
- * folder name keep it out of the address, so this page is /restaurants/new.
+ * Every admin page lives under /admin. "new" is a reserved name, so no
+ * group can ever take the address /admin/new.
  */
 
 import type { Metadata } from "next";
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   title: "New group",
 };
 
-const PAGE_PATH = "/restaurants/new";
+const PAGE_PATH = "/admin/new";
 
 export default async function NewGroupPage() {
   await requireUnlocked(PAGE_PATH);
@@ -34,7 +34,10 @@ export default async function NewGroupPage() {
     <section className={styles.page}>
       <div className={styles.card}>
         <h1 className={styles.title}>New group</h1>
-        <p className={styles.lead}>Record a restaurant, hotel, or restaurant group and its outlets.</p>
+        <p className={styles.lead}>
+          A group is the business you work with: a single restaurant, a hotel, or a restaurant company. Its outlets
+          are the restaurants and bars inside it, and each outlet gets its own menus and program.
+        </p>
         <NewGroupForm />
       </div>
     </section>

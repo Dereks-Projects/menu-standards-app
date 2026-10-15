@@ -11,6 +11,12 @@
  * pitch because it requires every page to render on request.
  * The Vercel preview toolbar is blocked by this policy on purpose.
  *
+ * Uploads: the upload screen sends each menu straight from the browser to
+ * Vercel Blob (decision 16), at https://vercel.com/api/blob/. That one
+ * path is allowed, not the rest of vercel.com. The address was confirmed
+ * in the browser on October 13, 2026, when this policy blocked the first
+ * live upload.
+ *
  * Search engines are told to skip every page until the landing page
  * launches. Secret link pages (/share and /learn) also send no referrer,
  * so their addresses are never passed to other sites.
@@ -33,7 +39,7 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self'",
-  "connect-src 'self'",
+  "connect-src 'self' https://vercel.com/api/blob/",
   "worker-src 'self' blob:",
   "frame-src 'none'",
   "object-src 'none'",

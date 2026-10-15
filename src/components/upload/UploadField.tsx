@@ -15,9 +15,10 @@
  *    failed read is never resent on its own (decision 53). Read again reads
  *    the stored file once more, without uploading it again.
  *
- * If the site's security setting blocks the upload, the row names the
- * blocked address, so the setting is corrected from what the browser
- * reports, not guessed.
+ * If the site's security setting blocks the upload, the upload stops at
+ * once and the row names the blocked address, so the setting is corrected
+ * from what the browser reports, not guessed. Without the stop, the
+ * storage library retries a blocked upload quietly for many minutes.
  *
  * Several files can be added at once, up to six, and each is read on its
  * own. The browser warns before leaving the page while any file is still
@@ -371,10 +372,16 @@ export function UploadField({
 
   async function sendFile(key: string, file: File, extension: UploadExtension, contentType: UploadContentType, type: MenuType) {
     // The security setting reports a blocked address as a browser event,
-    // not as part of the error, so the event is caught alongside.
+    // not as part of the error. The first block stops this upload, since
+    // every retry would be blocked the same way.
     const blocked: string[] = [];
+    const stop = new AbortController();
     function onViolation(event: SecurityPolicyViolationEvent) {
+      if (event.effectiveDirective !== "connect-src") {
+        return;
+      }
       blocked.push(event.blockedURI);
+      stop.abort();
     }
     document.addEventListener("securitypolicyviolation", onViolation);
 
@@ -385,12 +392,15 @@ export function UploadField({
         handleUploadUrl: UPLOAD_PERMISSION_PATH,
         contentType,
         multipart: false,
+        abortSignal: stop.signal,
         onUploadProgress: ({ percentage }) => updateRow(key, { progress: Math.round(percentage) }),
       });
       blobPath = stored.pathname;
     } catch (error) {
       // The violation event can arrive just after the error.
-      await new Promise((resolve) => window.setTimeout(resolve, 100));
+      if (blocked.length === 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, 100));
+      }
       const blockedAddress = blocked[0];
       updateRow(key, {
         stage: "failed",

@@ -1,7 +1,7 @@
 /*
- * Location: menu-standards-app/src/app/(admin)/[group]/[outlet]/upload/page.tsx
+ * Location: menu-standards-app/src/app/admin/[group]/[outlet]/upload/page.tsx
  *
- * The upload screen for one outlet, at /{group}/{outlet}/upload. Menus
+ * The upload screen for one outlet, at /admin/{group}/{outlet}/upload. Menus
  * are added here, and each one is read as soon as it arrives. The fields
  * live in src/components/upload/.
  *
@@ -41,7 +41,7 @@ export default async function UploadPage({ params }: UploadPageProps) {
   const isValidAddress = SlugSchema.safeParse(groupSlug).success && SlugSchema.safeParse(outletSlug).success;
 
   // The pass is checked before anything about the address is revealed.
-  await requireUnlocked(isValidAddress ? `/${groupSlug}/${outletSlug}/upload` : undefined);
+  await requireUnlocked(isValidAddress ? `/admin/${groupSlug}/${outletSlug}/upload` : undefined);
   if (!isValidAddress) {
     notFound();
   }

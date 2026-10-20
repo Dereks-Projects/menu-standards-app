@@ -5,8 +5,11 @@
  * links. Components read from this file, so a name or link changes in one
  * place.
  *
- * Navigation rule: a page is added to mainNav only after that page exists,
- * so the menu never links to a missing page.
+ * Navigation rule: a page is added to mainNav or adminNav only after that
+ * page exists, so the menu never links to a missing page.
+ *
+ * adminNav lists your admin pages. The header shows it only on locked
+ * pages, which means this device is unlocked.
  */
 
 export type NavLink = {
@@ -31,6 +34,8 @@ export type SiteConfig = {
   /** Pages that show the portfolio menu in the header. */
   readonly marketingPaths: readonly string[];
   readonly mainNav: readonly NavLink[];
+  /** Admin pages, shown in the header menu on locked pages only. */
+  readonly adminNav: readonly NavLink[];
   readonly portfolio: readonly PortfolioLink[];
 };
 
@@ -45,6 +50,10 @@ export const siteConfig: SiteConfig = {
   },
   marketingPaths: ["/"],
   mainNav: [{ label: "Home", href: "/" }],
+  adminNav: [
+    { label: "Admin", href: "/admin" },
+    { label: "New group", href: "/admin/new" },
+  ],
   portfolio: [
     {
       name: "Restaurant Standards",

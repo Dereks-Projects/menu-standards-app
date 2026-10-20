@@ -7,12 +7,15 @@
  * - Left: the Informative Media portfolio menu, on marketing pages only.
  *   Other pages show an empty space of the same width so the name stays
  *   centered.
- * - Right: the main menu, which also holds the Lock button.
+ * - Right: the main menu, which also holds the admin links (Admin and New
+ *   group, from src/config/site.ts) and the Lock button.
  *
- * The Lock button appears only on locked pages. Being on one means this
- * device is unlocked, so there is nothing to read from the pass cookie,
- * which browser code cannot see anyway. It posts a plain form, so it works
- * even before the page's JavaScript loads.
+ * The admin links and the Lock button appear only on locked pages. Being on
+ * one means this device is unlocked, so there is nothing to read from the
+ * pass cookie, which browser code cannot see anyway. On open pages, such as
+ * the home page, they stay hidden; /admin is always one address away. The
+ * Lock button posts a plain form, so it works even before the page's
+ * JavaScript loads.
  *
  * Accessibility: each menu button tells screen readers whether its panel
  * is open, the Escape key closes an open panel and returns focus to its
@@ -27,7 +30,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { isOpenPath, LOCK_API_PATH } from "@/lib/auth/access";
-import { siteConfig } from "@/config/site";
+import { type NavLink, siteConfig } from "@/config/site";
 
 import styles from "./Header.module.css";
 
@@ -54,7 +57,7 @@ export function Header() {
     openPanel !== null && openPanel.pathname === pathname ? openPanel.name : null;
 
   const showPortfolio = siteConfig.marketingPaths.includes(pathname);
-  const showLock = !isOpenPath(pathname);
+  const isLockedPage = !isOpenPath(pathname);
 
   useEffect(() => {
     if (activePanel === null) {
@@ -100,6 +103,24 @@ export function Header() {
 
   const isPortfolioOpen = activePanel === "portfolio";
   const isMenuOpen = activePanel === "menu";
+
+  function menuLinks(links: readonly NavLink[]) {
+    return links.map((link) => {
+      const isCurrentPage = pathname === link.href;
+      return (
+        <li key={link.href}>
+          <Link
+            href={link.href}
+            className={`${styles.panelLink} ${styles.menuLink}`}
+            aria-current={isCurrentPage ? "page" : undefined}
+            onClick={closePanels}
+          >
+            {link.label}
+          </Link>
+        </li>
+      );
+    });
+  }
 
   return (
     <header ref={headerRef} className={styles.header}>
@@ -187,26 +208,14 @@ export function Header() {
           hidden={!isMenuOpen}
           className={`${styles.panel} ${styles.panelRight}`}
         >
-          <ul className={styles.list}>
-            {siteConfig.mainNav.map((link) => {
-              const isCurrentPage = pathname === link.href;
-              return (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className={`${styles.panelLink} ${styles.menuLink}`}
-                    aria-current={isCurrentPage ? "page" : undefined}
-                    onClick={closePanels}
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <ul className={styles.list}>{menuLinks(siteConfig.mainNav)}</ul>
 
-          {showLock && (
+          {isLockedPage && (
             <>
+              <hr className={styles.divider} />
+              <ul className={styles.list} aria-label="Admin">
+                {menuLinks(siteConfig.adminNav)}
+              </ul>
               <hr className={styles.divider} />
               <form method="post" action={LOCK_API_PATH} onSubmit={closePanels}>
                 <button type="submit" className={styles.lockButton}>

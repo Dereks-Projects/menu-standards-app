@@ -14,9 +14,8 @@ export const UNLOCK_PATH = "/unlock";
 export const UNLOCK_API_PATH = "/api/unlock";
 export const LOCK_API_PATH = "/api/lock";
 
-/** Where to go after unlocking when no page was requested. This becomes
- * the restaurants page once it exists (Phase 8). */
-export const DEFAULT_AFTER_UNLOCK_PATH = "/";
+/** Where to go after unlocking when no page was requested: the command screen. */
+export const DEFAULT_AFTER_UNLOCK_PATH = "/admin";
 
 const OPEN_EXACT_PATHS: ReadonlySet<string> = new Set([
   "/",

@@ -26,10 +26,13 @@
  * be guessed and two uploads never collide. Slugs never change once issued
  * (decision 19), so these paths stay valid for the life of a program.
  *
+ * Counting: the command screen (src/app/admin/page.tsx) asks how many
+ * menus have been read for each outlet, counted from the records above.
+ *
  * Server only. Browser code never imports this file.
  */
 
-import { BlobPreconditionFailedError, get, put } from "@vercel/blob";
+import { BlobPreconditionFailedError, get, list, put } from "@vercel/blob";
 import type { z } from "zod";
 
 import { IdSchema, SlugSchema } from "@/lib/schemas/common";
@@ -55,6 +58,12 @@ const MAX_JSON_BYTES = 16 * 1024 * 1024;
 
 /** Stored records are always read fresh, so a short cache time is enough. */
 const JSON_CACHE_SECONDS = 60;
+
+/** The most files one listing page returns, which is also storage's limit. */
+const LIST_PAGE_SIZE = 1000;
+
+/** Stops a runaway listing: 50 pages is 50,000 files, far beyond version 1. */
+const MAX_LIST_PAGES = 50;
 
 /**
  * File types a menu may arrive as, by extension. These are the formats the
@@ -84,6 +93,8 @@ export const INDEX_PATHNAME = "index/index.json";
 const FILE_STEM_PATTERN = /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/;
 
 const UPLOAD_PATHNAME_PATTERN = /^groups\/([^/]+)\/outlets\/([^/]+)\/uploads\/([^/]+)\.([a-z]+)$/;
+
+const MENU_RECORD_PATHNAME_PATTERN = /^groups\/([^/]+)\/outlets\/([^/]+)\/menus\/([^/]+)\.json$/;
 
 /** Longer than any valid path, checked before any pattern runs. */
 const MAX_PATHNAME_LENGTH = 400;
@@ -308,4 +319,44 @@ export async function readFile(pathname: string): Promise<StoredFile | null> {
     byteSize: bytes.byteLength,
     uploadedAt: result.blob.uploadedAt,
   };
+}
+
+/* Counting */
+
+/** The key menu counts are stored under: "seagate/pool-bar". */
+export function outletCountKey(groupSlug: string, outletSlug: string): string {
+  return `${groupSlug}/${outletSlug}`;
+}
+
+/**
+ * How many menus have been read for each outlet, keyed by outletCountKey.
+ * Counts the reader's saved records in storage, so the number is always
+ * what storage actually holds. One listing covers every group, a page of
+ * up to 1,000 files at a time. Outlets with no reads are left out.
+ */
+export async function countMenuRecords(): Promise<ReadonlyMap<string, number>> {
+  const counts = new Map<string, number>();
+  let cursor: string | undefined;
+  for (let page = 0; page < MAX_LIST_PAGES; page += 1) {
+    const result = await list({ prefix: "groups/", limit: LIST_PAGE_SIZE, cursor });
+    for (const blob of result.blobs) {
+      const match = MENU_RECORD_PATHNAME_PATTERN.exec(blob.pathname);
+      const groupSlug = match?.[1];
+      const outletSlug = match?.[2];
+      const menuId = match?.[3];
+      if (groupSlug === undefined || outletSlug === undefined || menuId === undefined) {
+        continue;
+      }
+      if (!isSlug(groupSlug) || !isSlug(outletSlug) || !IdSchema.safeParse(menuId).success) {
+        continue;
+      }
+      const key = outletCountKey(groupSlug, outletSlug);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    if (!result.hasMore || result.cursor === undefined) {
+      return counts;
+    }
+    cursor = result.cursor;
+  }
+  throw new Error(`Storage holds more than ${MAX_LIST_PAGES * LIST_PAGE_SIZE} files; counting stopped.`);
 }

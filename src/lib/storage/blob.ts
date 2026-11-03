@@ -19,6 +19,7 @@
  *   groups/{group}/outlets/{outlet}/uploads/{name}-{random}.{ext}
  *                                                             uploaded menus
  *   groups/{group}/outlets/{outlet}/menus/{menuId}.json       reader results
+ *   groups/{group}/outlets/{outlet}/plans/v{n}.json           plan versions
  *   groups/{group}/outlets/{outlet}/programs/{programId}/v{n}.json
  *                                                             program versions
  *
@@ -26,8 +27,9 @@
  * be guessed and two uploads never collide. Slugs never change once issued
  * (decision 19), so these paths stay valid for the life of a program.
  *
- * Counting: the command screen (src/app/admin/page.tsx) asks how many
- * menus have been read for each outlet, counted from the records above.
+ * Listing: the command screen (src/app/admin/page.tsx) asks how many
+ * menus have been read for each outlet and its latest plan version, and
+ * the plan screen and route list one outlet's menus and plans.
  *
  * Server only. Browser code never imports this file.
  */
@@ -96,6 +98,8 @@ const UPLOAD_PATHNAME_PATTERN = /^groups\/([^/]+)\/outlets\/([^/]+)\/uploads\/([
 
 const MENU_RECORD_PATHNAME_PATTERN = /^groups\/([^/]+)\/outlets\/([^/]+)\/menus\/([^/]+)\.json$/;
 
+const PLAN_VERSION_PATHNAME_PATTERN = /^groups\/([^/]+)\/outlets\/([^/]+)\/plans\/v([1-9][0-9]{0,4})\.json$/;
+
 /** Longer than any valid path, checked before any pattern runs. */
 const MAX_PATHNAME_LENGTH = 400;
 
@@ -138,6 +142,14 @@ export function menuUploadPathname(
 /** Where the reader's result for one menu is saved. */
 export function menuRecordPathname(groupSlug: string, outletSlug: string, menuId: string): string {
   return `${outletFolder(groupSlug, outletSlug)}/menus/${requireId(menuId, "menu")}.json`;
+}
+
+/** Where one version of an outlet's plan is saved. Versions are never overwritten. */
+export function planVersionPathname(groupSlug: string, outletSlug: string, version: number): string {
+  if (!Number.isInteger(version) || version < 1 || version > 10000) {
+    throw new Error("A plan version is a whole number from 1 to 10,000.");
+  }
+  return `${outletFolder(groupSlug, outletSlug)}/plans/v${version}.json`;
 }
 
 /** Where one version of a program is saved. Versions are never overwritten. */
@@ -321,42 +333,139 @@ export async function readFile(pathname: string): Promise<StoredFile | null> {
   };
 }
 
-/* Counting */
+/* Listing and counting */
 
-/** The key menu counts are stored under: "seagate/pool-bar". */
+/** The key per-outlet figures are stored under: "seagate/pool-bar". */
 export function outletCountKey(groupSlug: string, outletSlug: string): string {
   return `${groupSlug}/${outletSlug}`;
 }
 
-/**
- * How many menus have been read for each outlet, keyed by outletCountKey.
- * Counts the reader's saved records in storage, so the number is always
- * what storage actually holds. One listing covers every group, a page of
- * up to 1,000 files at a time. Outlets with no reads are left out.
- */
-export async function countMenuRecords(): Promise<ReadonlyMap<string, number>> {
-  const counts = new Map<string, number>();
+type MenuRecordLocation = { readonly groupSlug: string; readonly outletSlug: string; readonly menuId: string };
+type PlanVersionLocation = { readonly groupSlug: string; readonly outletSlug: string; readonly version: number };
+
+/** Reads a reader record's address. Returns null for anything outside the layout. */
+export function parseMenuRecordPathname(pathname: string): MenuRecordLocation | null {
+  const match = MENU_RECORD_PATHNAME_PATTERN.exec(pathname);
+  const groupSlug = match?.[1];
+  const outletSlug = match?.[2];
+  const menuId = match?.[3];
+  if (groupSlug === undefined || outletSlug === undefined || menuId === undefined) {
+    return null;
+  }
+  if (!isSlug(groupSlug) || !isSlug(outletSlug) || !IdSchema.safeParse(menuId).success) {
+    return null;
+  }
+  return { groupSlug, outletSlug, menuId };
+}
+
+/** Reads a plan version's address. Returns null for anything outside the layout. */
+export function parsePlanVersionPathname(pathname: string): PlanVersionLocation | null {
+  const match = PLAN_VERSION_PATHNAME_PATTERN.exec(pathname);
+  const groupSlug = match?.[1];
+  const outletSlug = match?.[2];
+  const version = Number(match?.[3]);
+  if (groupSlug === undefined || outletSlug === undefined || !Number.isInteger(version)) {
+    return null;
+  }
+  if (!isSlug(groupSlug) || !isSlug(outletSlug)) {
+    return null;
+  }
+  return { groupSlug, outletSlug, version };
+}
+
+/** Every stored file under a prefix, a page of up to 1,000 at a time. */
+async function listAll(prefix: string): Promise<{ readonly pathname: string; readonly uploadedAt: Date }[]> {
+  const files: { pathname: string; uploadedAt: Date }[] = [];
   let cursor: string | undefined;
   for (let page = 0; page < MAX_LIST_PAGES; page += 1) {
-    const result = await list({ prefix: "groups/", limit: LIST_PAGE_SIZE, cursor });
+    const result = await list({ prefix, limit: LIST_PAGE_SIZE, cursor });
     for (const blob of result.blobs) {
-      const match = MENU_RECORD_PATHNAME_PATTERN.exec(blob.pathname);
-      const groupSlug = match?.[1];
-      const outletSlug = match?.[2];
-      const menuId = match?.[3];
-      if (groupSlug === undefined || outletSlug === undefined || menuId === undefined) {
-        continue;
-      }
-      if (!isSlug(groupSlug) || !isSlug(outletSlug) || !IdSchema.safeParse(menuId).success) {
-        continue;
-      }
-      const key = outletCountKey(groupSlug, outletSlug);
-      counts.set(key, (counts.get(key) ?? 0) + 1);
+      files.push({ pathname: blob.pathname, uploadedAt: blob.uploadedAt });
     }
     if (!result.hasMore || result.cursor === undefined) {
-      return counts;
+      return files;
     }
     cursor = result.cursor;
   }
-  throw new Error(`Storage holds more than ${MAX_LIST_PAGES * LIST_PAGE_SIZE} files; counting stopped.`);
+  throw new Error(`Storage holds more than ${MAX_LIST_PAGES * LIST_PAGE_SIZE} files under ${prefix}; listing stopped.`);
+}
+
+export type OutletFigures = {
+  readonly menusRead: number;
+  /** The newest plan version saved, or null when the outlet has no plan. */
+  readonly latestPlanVersion: number | null;
+};
+
+/**
+ * Menus read and the latest plan version for every outlet, keyed by
+ * outletCountKey, from one listing of every group's files. Outlets with no
+ * reads and no plans are left out.
+ */
+export async function summarizeOutletFiles(): Promise<ReadonlyMap<string, OutletFigures>> {
+  const figures = new Map<string, { menusRead: number; latestPlanVersion: number | null }>();
+  const entry = (key: string) => {
+    const existing = figures.get(key);
+    if (existing !== undefined) {
+      return existing;
+    }
+    const created = { menusRead: 0, latestPlanVersion: null as number | null };
+    figures.set(key, created);
+    return created;
+  };
+  for (const file of await listAll("groups/")) {
+    const menu = parseMenuRecordPathname(file.pathname);
+    if (menu !== null) {
+      entry(outletCountKey(menu.groupSlug, menu.outletSlug)).menusRead += 1;
+      continue;
+    }
+    const plan = parsePlanVersionPathname(file.pathname);
+    if (plan !== null) {
+      const current = entry(outletCountKey(plan.groupSlug, plan.outletSlug));
+      current.latestPlanVersion = Math.max(current.latestPlanVersion ?? 0, plan.version);
+    }
+  }
+  return figures;
+}
+
+/**
+ * How many menus have been read for each outlet, keyed by outletCountKey.
+ * Outlets with no reads are left out.
+ */
+export async function countMenuRecords(): Promise<ReadonlyMap<string, number>> {
+  const counts = new Map<string, number>();
+  for (const [key, figures] of await summarizeOutletFiles()) {
+    if (figures.menusRead > 0) {
+      counts.set(key, figures.menusRead);
+    }
+  }
+  return counts;
+}
+
+/** One outlet's reader records, newest first, as menu identifiers with their addresses. */
+export async function listMenuRecords(
+  groupSlug: string,
+  outletSlug: string,
+): Promise<{ readonly menuId: string; readonly pathname: string; readonly uploadedAt: Date }[]> {
+  const files = await listAll(`${outletFolder(groupSlug, outletSlug)}/menus/`);
+  return files
+    .flatMap((file) => {
+      const location = parseMenuRecordPathname(file.pathname);
+      return location !== null && location.groupSlug === groupSlug && location.outletSlug === outletSlug
+        ? [{ menuId: location.menuId, pathname: file.pathname, uploadedAt: file.uploadedAt }]
+        : [];
+    })
+    .sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime());
+}
+
+/** The newest plan version saved for one outlet, or null when it has none. */
+export async function latestPlanVersion(groupSlug: string, outletSlug: string): Promise<number | null> {
+  const files = await listAll(`${outletFolder(groupSlug, outletSlug)}/plans/`);
+  let latest: number | null = null;
+  for (const file of files) {
+    const location = parsePlanVersionPathname(file.pathname);
+    if (location !== null && location.groupSlug === groupSlug && location.outletSlug === outletSlug) {
+      latest = Math.max(latest ?? 0, location.version);
+    }
+  }
+  return latest;
 }

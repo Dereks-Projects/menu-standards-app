@@ -11,10 +11,10 @@
 
 ## The shape in one paragraph
 
-Derek is the only user. Restaurants are records, not accounts: a **group** with one or more **outlets**, addressed as `/{group}/{outlet}`. Derek uploads menus on site, approves the plan with the manager, and the engine (reader, planner, builders, checker) builds one program per outlet, tagged food or beverage. Derek clears the checker's flags, then hands out **read-only secret links**: manager, director, and student. Client links never expire; demo links expire after 30 days. Everything is locked behind Derek's password except a short open list.
+Derek is the only user. Restaurants are records, not accounts: a **group** with one or more **outlets**, addressed as `/admin/{group}/{outlet}` (decision 62). Derek runs everything from the command screen at `/admin`, uploads menus on site, approves the plan with the manager, and the engine (reader, planner, builders, checker) builds one program per outlet, tagged food or beverage. Derek clears the checker's flags, then hands out **read-only secret links**: manager, director, and student. Client links never expire; demo links expire after 30 days. Everything is locked behind Derek's password except a short open list.
 
 **Open to everyone:** `/`, `/how-it-works`, `/unlock`, `/legal/*`, `/share/*`, `/learn/*`, and site assets.
-**Locked:** everything else, including every `/{group}/{outlet}` page and every AI request.
+**Locked:** everything else, including every `/admin` page and every AI request.
 
 **Models (decision 41):** reader, planner, and builders GPT-6.1 Sol; checker GPT-6 Astra; role play scoring GPT-6 Luna.
 
@@ -135,29 +135,37 @@ Settings first, then two tranches of files, then a light test and Milestone 1. C
 
 ---
 
-## Phase 4: Group setup and upload screen
+## Phase 4: Group setup, upload screen, and command screen (complete)
 
-A minimal "new group" form comes first, because every upload belongs to an outlet.
+A minimal "new group" form comes first, because every upload belongs to an outlet. Closed October 20, 2026 (decision 67).
 
 ### Reader speed (done)
 - [x] Compared "high" and "medium" thinking on the dinner menu, twice, and ran both trick menus at medium. The reader stays at high (decision 61)
 - [x] `scripts/read-menu.ts`: `--effort` sets the thinking level for one test read, `--compare --effort medium` compares thinking levels, and a failed read prints the reason OpenAI or the network gave (decision 57)
 
 ### New group (done)
-- [x] `src/app/(admin)/restaurants/new/page.tsx`, `NewGroupForm.tsx`, and `NewGroup.module.css`: record a group and its outlets, with address checks
+- [x] `src/app/admin/new/page.tsx`, `NewGroupForm.tsx`, and `NewGroup.module.css`: record a group and its outlets at `/admin/new`, with address checks, a line explaining groups and outlets, and an Upload menus button for each saved outlet
 - [x] `src/lib/tenants/create-group.ts`: the rules a new group follows
 - [x] `src/app/api/groups/route.ts`: saves a new group; checks the pass, that the request came from this site, the rules, and duplicate addresses
 - [x] **Setting** New admin password, October 12, 2026, in `.env.local` and Vercel. The earlier one was not on record
 - [x] Verified live: empty and invalid forms refused, Test Kitchen saved, and its address refused a second time by the server
 
-### Upload screen
-- [ ] `src/app/(admin)/[group]/[outlet]/upload/page.tsx`: the upload screen for one outlet
-- [ ] `src/components/upload/UploadField.tsx`: drop zone, reads on drop, shows the item count; refuses iPhone HEIC photos with a way around it, since the reader cannot read them
-- [ ] `src/components/upload/OtherMenuField.tsx`: type dropdown (bar menu, full wine list, non-alcoholic list, specials, other), can repeat
-- [ ] `src/components/upload/Upload.module.css`
-- [ ] `next.config.ts`: allow the browser to send files to Vercel Blob. The security policy currently blocks it; the exact storage address is confirmed in the browser with the upload screen, not guessed
-- [ ] Verified live with Test Kitchen: a menu sent, read, and counted, and a HEIC photo refused
-- [ ] `src/components/ui/`: shared building blocks (button, field, card, status badge), added as needed
+### Upload screen (done)
+- [x] `src/app/admin/[group]/[outlet]/upload/page.tsx`: the upload screen for one outlet
+- [x] `src/components/upload/UploadField.tsx`: drop zone, reads on drop, shows the item count; refuses iPhone HEIC photos with a way around it, since the reader cannot read them; stops an upload at the first security block and names the blocked address
+- [x] `src/components/upload/OtherMenuField.tsx`: type dropdown (bar menu, full wine list, non-alcoholic list, specials, other), can repeat
+- [x] `src/components/upload/Upload.module.css`
+- [x] `next.config.ts`: the browser may send files to `https://vercel.com/api/blob/` and nothing else on vercel.com, an address confirmed in the browser when the policy blocked the first live upload (decision 65)
+- [x] Verified live with Test Kitchen, October 15, 2026: `btg.png` sent to private storage, read, and counted (29 items in 4 sections, 11 cents). HEIC refusal checked offline
+- [x] `src/components/ui/`: not needed in Phase 4; moved to Phase 7 (decision 67)
+
+### Command screen (done)
+- [x] `src/app/admin/`: every admin page moved under `/admin`, so each folder name matches its address (decision 62)
+- [x] `src/app/admin/page.tsx` and `Admin.module.css`: the command screen, with every group and outlet, menus read, program status, an Upload menus button for each outlet, and a New group button (decision 63)
+- [x] `src/lib/storage/blob.ts`: counts each outlet's saved menu reads in storage
+- [x] `src/components/Header/Header.tsx` and `src/config/site.ts`: Admin and New group in the header menu, on locked pages only
+- [x] `src/lib/auth/access.ts`: unlocking with no page requested lands on `/admin`
+- [x] Verified live, October 20, 2026: the command screen showed Test Kitchen with 1 menu read; its button opened the upload screen; the menu links, Lock, and the unlock landing behaved as designed
 
 ---
 
@@ -166,7 +174,7 @@ A minimal "new group" form comes first, because every upload belongs to an outle
 - [ ] `src/lib/ai/prompts/plan.md`
 - [ ] `src/lib/engine/plan.ts`
 - [ ] `src/app/api/plan/route.ts`
-- [ ] `src/app/(admin)/[group]/[outlet]/plan/page.tsx`
+- [ ] `src/app/admin/[group]/[outlet]/plan/page.tsx`
 - [ ] `src/components/plan/`: four numbers, synopsis, house terms to confirm (inline answers), what gets built (by track), Adjust and Approve
 - [ ] Approval saves the approved plan as a version
 
@@ -196,7 +204,8 @@ A minimal "new group" form comes first, because every upload belongs to an outle
 
 One set of pages with two modes: your workspace (editable) and the manager link (read only).
 
-- [ ] `src/app/(admin)/[group]/[outlet]/page.tsx`: the program home
+- [ ] `src/app/admin/[group]/[outlet]/page.tsx`: the program home
+- [ ] `src/components/ui/`: shared building blocks (button, field, card, status badge), added once two screens need the same piece (decision 67)
 - [ ] `src/components/program/FormatTiles.tsx`: course, flashcards, role play, quizzes, exam, foundations
 - [ ] `src/components/program/TrackToggle.tsx`: All, Food, Beverage
 - [ ] `src/components/program/PreShiftCard.tsx`: note of the day, shuffle, print
@@ -206,7 +215,7 @@ One set of pages with two modes: your workspace (editable) and the manager link 
 - [ ] `src/components/program/TeamPanel.tsx` and `WeakSpotsPanel.tsx`: sample data, clearly labeled
 - [ ] `src/components/program/UpdateMenuButton.tsx`: full rebuild in version 1
 - [ ] `src/components/formats/`: course card, flashcard, role play, quiz, exam (shared by workspace, manager, and student views)
-- [ ] Format pages under `src/app/(admin)/[group]/[outlet]/`: `course`, `flashcards`, `role-play`, `quizzes`, `exam`, `foundations`
+- [ ] Format pages under `src/app/admin/[group]/[outlet]/`: `course`, `flashcards`, `role-play`, `quizzes`, `exam`, `foundations`
 - [ ] `src/lib/engine/preshift.ts`: note of the day by date, no repeats until the pool is used
 - [ ] `src/app/api/program/` routes: save edits, clear flags
 - [ ] `src/app/api/roleplay/score/route.ts`: GPT-6 Luna, with usage limits
@@ -217,12 +226,12 @@ One set of pages with two modes: your workspace (editable) and the manager link 
 
 ## Phase 8: Admin dashboard, director pages, secret links
 
-- [ ] `src/app/(admin)/restaurants/page.tsx`: your home screen
-  - Every group and outlet with program status
+- [ ] `src/app/admin/page.tsx`: complete the command screen, started in Phase 4 (decision 63)
+  - Every group and outlet with program status (done in Phase 4, with menus read)
   - All open flags, every link and its status, demo days remaining
-  - Cost per build, last menu upload, New group button
+  - Cost per build, last menu upload
 - [ ] Edit, archive, or delete groups and outlets (requested October 12, 2026; none of this exists yet)
-- [ ] `src/app/(admin)/[group]/page.tsx`: director page (sample completion data)
+- [ ] `src/app/admin/[group]/page.tsx`: director page (sample completion data)
 - [ ] `src/lib/links/tokens.ts`: creates link codes, stores only their fingerprints
 - [ ] `src/app/api/links/route.ts`: create, cancel, reissue
 - [ ] `src/app/share/[token]/`: manager and director views, read only
@@ -236,7 +245,7 @@ One set of pages with two modes: your workspace (editable) and the manager link 
 
 - [ ] `content/foundations/food/`: food fundamentals for non-chefs
 - [ ] `content/foundations/beverage/`: beverage fundamentals for non-sommeliers
-- [ ] `src/app/(admin)/[group]/[outlet]/preview/page.tsx`: what employees will see
+- [ ] `src/app/admin/[group]/[outlet]/preview/page.tsx`: what employees will see
 
 ---
 
@@ -256,6 +265,7 @@ One set of pages with two modes: your workspace (editable) and the manager link 
 - [ ] Move `src/app/page.tsx` into `src/app/(marketing)/`
 - [ ] `src/app/(marketing)/page.tsx`: the landing page
 - [ ] `src/app/(marketing)/how-it-works/page.tsx`
+- [ ] `/restaurants`: a public showcase of the outlets Menu Standards serves, listing only clients who agree (decision 64)
 - [ ] Legal pages under `src/app/legal/`, with the standard language each requires, in place before client data arrives:
   - Privacy policy
   - Content policy
@@ -283,7 +293,7 @@ One set of pages with two modes: your workspace (editable) and the manager link 
 | `DATABASE_URL` | Phase 10 | `.env.local`, Vercel |
 
 The password settings live in Vercel Production only, so preview deployments stay locked. That fails safe.
-How this computer reaches storage for local testing is settled with the test harness pitch (decision 44).
+This computer never reaches storage; menus are tested from the `private/` folder (decision 57).
 
 Never pasted into chat. Never committed.
 

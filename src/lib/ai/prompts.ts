@@ -12,8 +12,8 @@
  * the step with an error instead of running it without instructions.
  *
  * On the live site, this folder must be bundled with every route that uses
- * it. That is set in next.config.ts (outputFileTracingIncludes), added with
- * the read route.
+ * it. That is set in next.config.ts (outputFileTracingIncludes), for the
+ * read route and the plan route.
  *
  * Server only.
  */
@@ -31,6 +31,7 @@ export const PROMPT_NAMES = [
   "read-non-alcoholic",
   "read-specials",
   "read-other",
+  "plan",
 ] as const;
 
 export type PromptName = (typeof PROMPT_NAMES)[number];

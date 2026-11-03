@@ -78,6 +78,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   outputFileTracingIncludes: {
     "/api/read": ["./src/lib/ai/prompts/*.md"],
+    "/api/plan": ["./src/lib/ai/prompts/*.md"],
   },
   async headers() {
     return [

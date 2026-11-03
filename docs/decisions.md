@@ -11,6 +11,7 @@
 ## Product shape
 
 **1. One user: Derek.** Restaurants are records, not accounts. A group holds one or more outlets, addressed as `/{group}/{outlet}`. No user accounts, roles, or sign-in in version 1.
+*Changed October 13, 2026:* addresses now sit under `/admin`, as `/admin/{group}/{outlet}` (decision 62).
 *Why:* Derek uploads menus on site with the manager present. The account model stays undecided until there is a working product and a buyer.
 
 **2. Secret links are read only.** Manager, director, and student links each end in a long random code. Only a fingerprint of each code is stored. Client links never expire; demo links expire after 30 days. Any link can be canceled and reissued.
@@ -40,6 +41,20 @@
 
 **9. Specials stays its own menu type.**
 *Why:* specials change most often and drive the future "rebuild only the changes" feature.
+
+**62. Every admin page lives under `/admin`.** The command screen is `/admin`, the New group page is `/admin/new`, and each outlet's pages are `/admin/{group}/{outlet}/...`, starting with `/upload`. The pages sit in `src/app/admin/`, so each folder name matches the address in the browser. Managers and staff never see these addresses: they use secret links (`/share/...` and `/learn/...`).
+*Why:* one door for everything Derek controls, and `/restaurants` stays free for a public page (decision 64). "admin," "new," and "restaurants" were already reserved names (decision 19), so no group can take `/admin/new` or collide with an app page.
+*Recorded:* October 13, 2026, with only Test Kitchen saved, so nothing already handed out changed.
+
+**63. The command screen at `/admin` runs the whole app.** It lists every active group by name, each outlet with its menus read and program status, an Upload menus button for each outlet, and a New group button. Menus read are counted from the reader's saved records in storage on every visit; if counting fails, the page still loads and says so. The header menu shows Admin and New group on locked pages only, and unlocking with no page requested lands here. It is built in stages: each phase adds its stage (plan, build, checker flags, links, cost), and Phase 8 completes it.
+*Why:* Derek controls every client from one screen, and nothing saved is ever out of reach.
+*Recorded:* October 13, 2026; built and verified live October 20, 2026.
+
+**64. `/restaurants` is held for a public showcase.** A guest-facing marketing page listing the outlets Menu Standards serves, built with the landing page in Phase 11. A client appears there only after agreeing to it.
+*Why:* a client list is a strong marketing tool, but a client's name on a public page is their decision.
+
+**66. Editing, archiving, and deleting groups and outlets come with the full command screen in Phase 8.** Until then, a saved group's address is permanent (decision 19), so new groups are saved with care. Test Kitchen stays as the standing test record.
+*Recorded:* October 12, 2026, when the first live save showed there was no way to correct a record.
 
 ---
 
@@ -162,6 +177,10 @@
 **56. The index is saved with version checks.** Every change reads the latest copy straight from storage, skipping the cache, and saves only if nothing changed in between, starting over up to three times. The index's integrity rules (unique slugs and identifiers, no reserved names, no record pointing at something missing) are checked on every read and every save.
 *Why:* Vercel can serve a stored file up to 60 seconds old after it changes, which could otherwise let two quick saves overwrite each other.
 
+**65. The security policy allows uploads to one storage path only.** `connect-src` allows `'self'` and `https://vercel.com/api/blob/`, and nothing else on vercel.com. The path was confirmed in the browser on October 13, 2026, when the policy blocked the first live upload. If the policy blocks an upload, the upload field stops at once and shows the blocked address.
+*Why:* the storage library otherwise retries a blocked upload quietly for many minutes, and an address taken from the browser's own report is never a guess.
+*Recorded:* October 13, 2026; verified live October 15, 2026.
+
 ---
 
 ## Stack and tooling
@@ -246,3 +265,5 @@ Pending pitch: automated tests. The Milestone 1 test harness was pitched, approv
 **59. Version 2 idea, not built: a conversation before the final print.** The manager tells the AI about exceptions before the program is finalized, for example "our pesto contains an allergen it usually doesn't." Version 1 covers this by hand: a manager or chef edits any card, saved as "chef confirmed" (decision 5).
 
 **60. Phase 3 closed on October 6, 2026,** with storage and the reader live behind the gate and Milestone 1 passed (decision 54).
+
+**67. Phase 4 closed on October 20, 2026,** with the New group page, the upload screen, and the command screen verified on the live site. The reader stays at high thinking (decision 61). The shared building blocks (`src/components/ui/`) were not needed: each screen keeps its own styles, and shared pieces are added in Phase 7, once two screens need the same one. The admin password was reset on October 12, 2026, because the earlier one was not on record.

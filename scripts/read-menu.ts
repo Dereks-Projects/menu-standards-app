@@ -38,6 +38,10 @@
  * When a read fails, the reason OpenAI or the network gave is printed
  * under the failure, with anything that looks like a key hidden, so a
  * failure can be diagnosed instead of guessed at.
+ *
+ * Every wine and cocktail is listed with its slots, one line each, so a
+ * read can be checked line by line against the menu. A value marked with
+ * an asterisk is known from wine or spirits knowledge, not printed.
  */
 
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
@@ -48,6 +52,7 @@ import { isModelId, MODEL_IDS, type ModelId, type ReasoningEffort, STEP_SETTINGS
 import { type MenuFileType, newMenuId, readMenu, type ReadMenuResult } from "@/lib/engine/read";
 import {
   allItems,
+  type DetailSource,
   itemCount,
   itemsWithConsumerAdvisory,
   type Menu,
@@ -55,6 +60,7 @@ import {
   type MenuType,
   MenuTypeSchema,
   pendingHouseTerms,
+  spokenWineName,
 } from "@/lib/schemas/menu";
 import { MAX_UPLOAD_BYTES } from "@/lib/storage/blob";
 
@@ -276,6 +282,7 @@ async function runRead(file: LoadedFile, menuType: MenuType, settings: ReadSetti
         attempts: result.attempts,
         droppedTerms: result.droppedTerms,
         droppedQuestions: result.droppedQuestions,
+        droppedDetails: result.droppedDetails,
         menu: result.menu,
       },
       null,
@@ -309,6 +316,57 @@ function listNames(names: readonly string[]): string {
   return names.length > MAX_LISTED ? `${shown}; and ${names.length - MAX_LISTED} more` : shown;
 }
 
+/** A slot value, with an asterisk when it is known rather than printed. */
+function slot(value: { value: string; source: DetailSource } | null): string {
+  return value === null ? "-" : `${value.value}${value.source === "known" ? "*" : ""}`;
+}
+
+function priceText(value: number | null): string {
+  return value === null ? "-" : String(value);
+}
+
+/** One line per wine: spoken name, color, grapes, place, vintage, prices. */
+function wineLines(menu: Menu): string[] {
+  const wines = allItems(menu).filter((item) => item.wine !== null);
+  if (wines.length === 0) {
+    return [];
+  }
+  return [
+    `  Wine slots (${count(wines.length, "wine")}; * known, not printed):`,
+    ...wines.map((item) => {
+      const wine = item.wine;
+      if (wine === null) {
+        return "";
+      }
+      const grapes = wine.grapes.length === 0 ? "-" : wine.grapes.map(slot).join(", ");
+      const place = [wine.appellation ?? "-", slot(wine.region), slot(wine.country)].join(", ");
+      return `    ${spokenWineName(item)} | ${slot(wine.color)} | ${grapes} | ${place} | ${wine.vintage ?? "-"} | glass ${priceText(wine.glassPrice)} | bottle ${priceText(wine.bottlePrice)}`;
+    }),
+  ];
+}
+
+/** One line per drink: name, spirits with brands, serve, glass, garnish, price. */
+function cocktailLines(menu: Menu): string[] {
+  const drinks = allItems(menu).filter((item) => item.cocktail !== null);
+  if (drinks.length === 0) {
+    return [];
+  }
+  return [
+    `  Cocktail slots (${count(drinks.length, "drink")}; * known, not printed):`,
+    ...drinks.map((item) => {
+      const drink = item.cocktail;
+      if (drink === null) {
+        return "";
+      }
+      const spirits =
+        drink.spirits.length === 0
+          ? "-"
+          : drink.spirits.map((spirit) => `${slot(spirit.category)}${spirit.brand === null ? "" : ` (${spirit.brand})`}`).join(", ");
+      return `    ${item.name} | ${spirits} | serve ${slot(drink.serve)} | glass ${drink.glass ?? "-"} | garnish ${drink.garnish ?? "-"} | ${priceText(item.price.amount)}`;
+    }),
+  ];
+}
+
 function report(file: LoadedFile, menuType: MenuType, run: Run): void {
   const { menu } = run.result;
   const withAllergens = allItems(menu).filter((item) => item.allergens.length > 0);
@@ -329,9 +387,11 @@ function report(file: LoadedFile, menuType: MenuType, run: Run): void {
     ...(pendingHouseTerms(menu).length === 0
       ? ["    none"]
       : pendingHouseTerms(menu).map((entry) => `    ${entry.text}: ${entry.question}`)),
+    ...wineLines(menu),
+    ...cocktailLines(menu),
     `  Reader notes (${menu.readerNotes.length}):`,
     ...(menu.readerNotes.length === 0 ? ["    none"] : menu.readerNotes.map((note) => `    ${note}`)),
-    `  Dropped as not printed on the menu: ${count(run.result.droppedTerms, "term")}, ${count(run.result.droppedQuestions, "question")}`,
+    `  Dropped as not printed on the menu: ${count(run.result.droppedTerms, "term")}, ${count(run.result.droppedQuestions, "question")}, ${count(run.result.droppedDetails, "slot value")}`,
     `  Saved: ${run.savedTo}`,
   ];
   console.log(lines.join("\n"));

@@ -16,7 +16,10 @@ A by-the-glass list is short, and staff are quizzed on every wine on it: which i
 Fill wine for every item, and cocktail for none.
 
 - color: sparkling, white, rose, orange, red, dessert, or fortified. Take it from the section heading when the heading says. Otherwise give what the wine is: a Puligny-Montrachet is white, a Barolo is red, a Champagne or Prosecco is sparkling.
-- grapes: each grape the line prints. Old World wines are often named by place instead of grape. When the place's rules call for a single grape, give it: Chablis or Puligny-Montrachet is Chardonnay, Sancerre is Sauvignon Blanc, Barolo is Nebbiolo. When the grapes vary by producer, as in Bordeaux, Rioja, or Champagne, leave grapes empty unless the line prints them.
+- grapes: each grape the line prints. Old World wines are often named by place instead of grape. Then give the grape a server would name, the way the trade speaks of the wine, even when theory allows more:
+  - A single-grape place: Chablis and Puligny-Montrachet are Chardonnay, Sancerre is Sauvignon Blanc, Barolo is Nebbiolo, Brunello di Montalcino is Sangiovese.
+  - A blend named by place: its lead grape. Left Bank Bordeaux (Médoc, Haut-Médoc, Pauillac, Margaux, Saint-Julien, Saint-Estèphe, Pessac-Léognan, Graves) is Cabernet Sauvignon. Right Bank Bordeaux (Saint-Émilion, Pomerol, Fronsac) and red Bordeaux with no bank named are Merlot. White Bordeaux is Sauvignon Blanc. Rioja and Ribera del Duero are Tempranillo. Chianti is Sangiovese. Châteauneuf-du-Pape and red Côtes du Rhône are Grenache. Red Northern Rhône, such as Côte-Rôtie, Hermitage, or Crozes-Hermitage, is Syrah.
+  - Champagne and other sparkling blends: leave grapes empty unless the line prints them or a style names them: Blanc de Blancs is Chardonnay.
 - producer: the winery or house, as printed, such as Joseph Drouhin or Nino Franco.
 - wineName: the cuvée or proprietary name, as printed, such as Rustico or Cask 23. Null when there is none. A classification such as Reserva or Brut is a term, not a wine name.
 - appellation: the most specific place the line prints, such as Puligny-Montrachet, Valdobbiadene, or Napa Valley.
@@ -26,4 +29,6 @@ Fill wine for every item, and cocktail for none.
 - glassPrice: the glass price as a number, exactly as printed. When the line shows several pours, use the standard glass. When the price sits with the section heading, use that number.
 - bottlePrice: the bottle price as a number when the line prints one, otherwise null.
 
-Example: the line "Burgundy, Joseph Drouhin, Puligny-Montrachet, 2020, $29" under the heading "White" is color white, grapes Chardonnay, producer Joseph Drouhin, wineName null, appellation Puligny-Montrachet, region Burgundy, country France, vintage 2020, glassPrice 29, bottlePrice null, knownConfidence 0.95.
+Examples:
+- The line "Burgundy, Joseph Drouhin, Puligny-Montrachet, 2020, $29" under the heading "White" is color white, grapes Chardonnay, producer Joseph Drouhin, wineName null, appellation Puligny-Montrachet, region Burgundy, country France, vintage 2020, glassPrice 29, bottlePrice null, knownConfidence 0.95.
+- The line "Merlot Blend, Les Cadrans de Lassegue, Saint-Emilion Grand Cru 2022, 28" under the heading "Red" is color red, grapes Merlot, producer null, wineName Les Cadrans de Lassègue, appellation Saint-Émilion Grand Cru, region Bordeaux, country France, vintage 2022, glassPrice 28. The name stays "Merlot Blend, Les Cadrans de Lassegue, Saint-Emilion Grand Cru 2022", as printed.

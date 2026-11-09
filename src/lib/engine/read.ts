@@ -26,6 +26,9 @@
  *   or a price, is dropped and counted when the line does not print it. A
  *   slot that may hold wine or spirits knowledge, such as a grape or a
  *   country, is marked printed or known by the code, never by the AI.
+ * - Accents are made right on every word the program teaches: each slot,
+ *   term, and house term (see accents.ts). Only marks change, never
+ *   letters, and the item's own name and description stay as printed.
  * - Every wine on a by-the-glass list or wine list, and every drink on a
  *   cocktail menu, must fill its slots, with a wine's color, country, and
  *   price. On the first attempt a miss sends the answer back with the
@@ -39,6 +42,7 @@ import { randomBytes } from "node:crypto";
 import { z } from "zod";
 
 import { type AiContent, askForJson } from "@/lib/ai/client";
+import { copyMarks, hasMarks, plainLetters, withAccents } from "@/lib/engine/accents";
 import type { ModelId, ReasoningEffort } from "@/lib/ai/models";
 import { composePrompt, type PromptName } from "@/lib/ai/prompts";
 import {
@@ -279,9 +283,16 @@ const SERVE_WORDS: Readonly<Record<ServeStyle, RegExp | null>> = {
   other: null,
 };
 
-/** Spacing collapsed; an empty value becomes null. */
+/**
+ * Spacing collapsed, and a word split by a line break closed up:
+ * "Saint- Julien" to "Saint-Julien". An empty value becomes null.
+ */
 function tidyText(value: string | null): string | null {
-  const text = value?.replace(/\s+/g, " ").trim() ?? "";
+  const text =
+    value
+      ?.replace(/\s+/g, " ")
+      .replace(/(\p{L})- (\p{L})/gu, "$1-$2")
+      .trim() ?? "";
   return text.length === 0 ? null : text;
 }
 
@@ -406,6 +417,91 @@ function checkCocktail(answer: AnswerCocktail, words: readonly string[], counter
     garnish: printedOnly(answer.garnish, words, counter),
     knownConfidence: clampConfidence(answer.knownConfidence),
   };
+}
+
+/* Accents */
+
+type TextHolder = { text: string };
+
+/**
+ * Calls fix on every text the program teaches from a reading, and keeps
+ * what it returns: each slot, term, house term, and question. The item's
+ * name and description are left as printed.
+ */
+function eachTaughtText(
+  sections: readonly { items: readonly { terms: TextHolder[]; wine: WineDetails | null; cocktail: CocktailDetails | null }[] }[],
+  houseTerms: readonly { text: string; question: string }[],
+  fix: (text: string) => string,
+): void {
+  const fixOrNull = (text: string | null) => (text === null ? null : fix(text));
+  for (const section of sections) {
+    for (const item of section.items) {
+      for (const term of item.terms) {
+        term.text = fix(term.text);
+      }
+      const wine = item.wine;
+      if (wine !== null) {
+        wine.producer = fixOrNull(wine.producer);
+        wine.wineName = fixOrNull(wine.wineName);
+        wine.appellation = fixOrNull(wine.appellation);
+        for (const sourced of [wine.region, wine.country, ...wine.grapes]) {
+          if (sourced !== null) {
+            sourced.value = fix(sourced.value);
+          }
+        }
+      }
+      const cocktail = item.cocktail;
+      if (cocktail !== null) {
+        for (const spirit of cocktail.spirits) {
+          spirit.category.value = fix(spirit.category.value);
+          spirit.brand = fixOrNull(spirit.brand);
+        }
+        cocktail.glass = fixOrNull(cocktail.glass);
+        cocktail.garnish = fixOrNull(cocktail.garnish);
+      }
+    }
+  }
+  for (const entry of houseTerms) {
+    entry.text = fix(entry.text);
+    entry.question = fix(entry.question);
+  }
+}
+
+/**
+ * Makes accents right across a reading, in two passes. First, the fixed
+ * spellings (accents.ts) and line-break tidying. Then one name reads the
+ * same everywhere: when the reader wrote a name with accents in one place,
+ * such as a producer, the same letters without accents elsewhere, such as
+ * a term, take those accents. A name written two different ways is left
+ * as the reader wrote it.
+ */
+function accentReading(
+  sections: Parameters<typeof eachTaughtText>[0],
+  houseTerms: Parameters<typeof eachTaughtText>[1],
+): void {
+  eachTaughtText(sections, houseTerms, (text) => withAccents(text.replace(/(\p{L})- (\p{L})/gu, "$1-$2")));
+
+  const spellings = new Map<string, string | null>();
+  eachTaughtText(sections, houseTerms, (text) => {
+    if (hasMarks(text)) {
+      const key = plainLetters(text);
+      const known = spellings.get(key);
+      if (known === undefined) {
+        spellings.set(key, text);
+      } else if (known !== null && copyMarks(known, text) !== known) {
+        spellings.set(key, null);
+      }
+    }
+    return text;
+  });
+
+  eachTaughtText(sections, houseTerms, (text) => {
+    if (hasMarks(text)) {
+      return text;
+    }
+    const spelling = spellings.get(plainLetters(text));
+    return spelling === undefined || spelling === null ? text : withAccents(copyMarks(text, spelling));
+  });
 }
 
 /** "Problem: A; B; C; and 4 more." */
@@ -547,9 +643,12 @@ export function checkReaderAnswer(
   }
   const checkNotes = misses.map((miss) => namedList(miss.note, miss.names).slice(0, 200));
 
+  const houseTerms = answer.houseTermsToConfirm.map((entry) => ({ text: entry.text, question: entry.question }));
+  accentReading(sections, houseTerms);
+
   const seenQuestions = new Set<string>();
   let droppedQuestions = 0;
-  const houseTermsToConfirm = answer.houseTermsToConfirm.filter((entry) => {
+  const houseTermsToConfirm = houseTerms.filter((entry) => {
     const key = forMatching(entry.text);
     if (seenQuestions.has(key)) {
       return false;

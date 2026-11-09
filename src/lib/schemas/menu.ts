@@ -274,18 +274,25 @@ export function itemsWithConsumerAdvisory(menu: Menu): MenuItem[] {
 }
 
 /**
- * A wine's name the way a sommelier says it aloud: producer, then the
- * wine's own name, or its place, or its grape. "Nino Franco Rustico",
- * "Joseph Drouhin Puligny-Montrachet". The item's full printed name when
- * the producer is not known.
+ * A wine's name the way a sommelier says it aloud, with its accents:
+ * the producer, then the wine's own name, or its place, or its grape.
+ * "Nino Franco Rustico", "Joseph Drouhin Puligny-Montrachet". Without a
+ * producer, the wine's own name leads: "Les Cadrans de Lassègue
+ * Saint-Émilion Grand Cru". The item's printed name when the slots hold
+ * neither.
  */
 export function spokenWineName(item: Pick<MenuItem, "name" | "wine">): string {
   const wine = item.wine;
-  if (wine === null || wine.producer === null) {
+  if (wine === null) {
     return item.name;
   }
-  const second = wine.wineName ?? wine.appellation ?? wine.grapes[0]?.value ?? null;
-  return second === null ? wine.producer : `${wine.producer} ${second}`;
+  const first = wine.producer ?? wine.wineName;
+  if (first === null) {
+    return item.name;
+  }
+  const second =
+    (wine.producer === null ? null : wine.wineName) ?? wine.appellation ?? wine.grapes[0]?.value ?? null;
+  return second === null ? first : `${first} ${second}`;
 }
 
 /** The tracks this menu covers, decided by its items, not by its type. */
